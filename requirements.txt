@@ -1,5 +1,6 @@
 DrissionPage>=4.0.0
 pyvirtualdisplay
-python-dotenv
 fastapi
 uvicorn
+pydantic
+requests

@@ -1,0 +1,57 @@
+name: Legacy Release & Docker Build
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'legacy-v*'   # 只有推 legacy-v 开头的 tag 时才触发，比如 legacy-v1.0.0
+  workflow_dispatch:
+
+jobs:
+  create-legacy-release:
+    name: 创建历史版本 Release（附带源码 ZIP）
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Legacy Release ${{ github.ref_name }}"
+          body: "历史版本自动构建：${{ github.ref_name }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push-legacy-docker:
+    name: 构建并推送历史版本 Docker 镜像
+    runs-on: ubuntu-latest
+    needs: create-legacy-release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Legacy Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # 注意：历史版不推 latest，只推这个 tag 对应的镜像
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/xin2:${{ github.ref_name }}

@@ -1,11 +1,5 @@
 DrissionPage>=4.0.0
 pyvirtualdisplay
+python-dotenv
 fastapi
 uvicorn
-pydantic
-requests
-loguru       # 更好的日志管理
-tenacity     # 优雅的重试机制
-python-dotenv
-pydantic-settings
-curl_cffi>=0.5.10

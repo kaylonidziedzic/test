@@ -1,0 +1,23 @@
+name: Create Release with Source ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'     # 只有推送以 v 开头的 tag 时才触发，比如 v1.0.0
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          body: "自动构建的发布版本：${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

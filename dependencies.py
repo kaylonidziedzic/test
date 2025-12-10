@@ -1,13 +1,17 @@
-from fastapi import HTTPException, Security, Query
-from fastapi.security import APIKeyHeader
+"""FastAPI dependencies for header/query API key validation."""
+
 from typing import Optional
+
+from fastapi import HTTPException, Query, Security
+from fastapi.security import APIKeyHeader
+
 from config import settings
 from utils.logger import log
 
 # 1. Header 鉴权 (给程序/爬虫用)
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
 
-async def verify_api_key(api_key: str = Security(api_key_header)):
+async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
     """
     依赖注入：用于校验请求头 (Header) 中的 API Key
     """
@@ -24,7 +28,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     return api_key
 
 # 2. Query 参数鉴权 (给浏览器/阅读APP用)
-async def verify_query_key(key: Optional[str] = Query(None)):
+async def verify_query_key(key: Optional[str] = Query(None)) -> Optional[str]:
     """
     依赖注入：用于校验 URL 参数 (Query) 中的 API Key
     例如: /raw?url=...&key=123456

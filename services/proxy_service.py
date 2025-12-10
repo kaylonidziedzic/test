@@ -1,17 +1,31 @@
+"""Proxy service layer wrapping curl_cffi and browser-based fallbacks.
+
+尽量保持原有行为不变，仅增加类型标注与注释，便于维护和阅读。
+"""
+
 import time
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse  # [CHANGED] 根据域名做特殊逻辑
+
 from curl_cffi import requests  # ✅ 使用支持指纹模拟的 requests
-from core.solver import solve_turnstile
-from utils.logger import log
+
 from config import settings
 from core.browser import browser_manager  # [CHANGED] 为 69 直接用浏览器拿页面做准备
+from core.solver import solve_turnstile
+from utils.logger import log
 
 # 内存缓存
-CACHE = {}
+CACHE: Dict[str, Dict[str, Any]] = {}
 
 
-def get_credentials(url: str, force_refresh: bool = False):
+def get_credentials(url: str, force_refresh: bool = False) -> Dict[str, Any]:
+    """获取经过 Cloudflare 过盾后的 cookie 与 UA.
+
+    ⚠️ 行为必须保持一致：缓存判定、浏览器过盾调用顺序不做任何改动。
+    """
+
     from urllib.parse import urlparse
+
     domain = urlparse(url).netloc
 
     now = time.time()
@@ -37,12 +51,13 @@ def get_credentials(url: str, force_refresh: bool = False):
 def proxy_request(
     url: str,
     method: str,
-    headers: dict,
-    data: dict = None,
-    json: dict = None,
+    headers: Dict[str, str],
+    data: Optional[Dict[str, Any]] = None,
+    json: Optional[Dict[str, Any]] = None,
 ):
-    """
-    代理请求核心逻辑 (集成指纹模拟)
+    """代理请求核心逻辑 (集成指纹模拟).
+
+    ⚠️ 不允许变更任何请求顺序、重试策略或特殊站点处理逻辑。
     """
     retries = 1
     parsed = urlparse(url)

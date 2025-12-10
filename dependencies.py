@@ -1,23 +1,42 @@
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Security, Query
 from fastapi.security import APIKeyHeader
+from typing import Optional
 from config import settings
 from utils.logger import log
 
-# 定义 API Key 的 Header 名字，比如 X-API-KEY: my-secret-key
+# 1. Header 鉴权 (给程序/爬虫用)
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
     """
-    依赖注入函数：用于校验请求头中的 API Key
+    依赖注入：用于校验请求头 (Header) 中的 API Key
     """
-    # 如果配置文件里没有设置密码，默认允许所有访问（开发模式）
+    # 如果没设置密码，直接放行
     if not settings.API_KEY:
         return True
     
     if api_key != settings.API_KEY:
-        log.warning(f"⚠️ 鉴权失败，接收到的 Key: {api_key}")
+        log.warning(f"⚠️ Header 鉴权失败，接收到的 Key: {api_key}")
         raise HTTPException(
             status_code=403, 
-            detail="Could not validate credentials"
+            detail="Invalid API Key in Header"
         )
     return api_key
+
+# 2. Query 参数鉴权 (给浏览器/阅读APP用)
+async def verify_query_key(key: Optional[str] = Query(None)):
+    """
+    依赖注入：用于校验 URL 参数 (Query) 中的 API Key
+    例如: /raw?url=...&key=123456
+    """
+    # 如果没设置密码，直接放行
+    if not settings.API_KEY:
+        return True
+    
+    if key != settings.API_KEY:
+        log.warning(f"⚠️ URL 参数鉴权失败，接收到的 Key: {key}")
+        raise HTTPException(
+            status_code=403, 
+            detail="Invalid Key in Query Param"
+        )
+    return key

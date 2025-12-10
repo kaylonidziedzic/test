@@ -1,10 +1,13 @@
 name: Release & Docker Build
 
+permissions:
+  contents: write   # 允许创建 release / 上传资产
+
 on:
   push:
     tags:
-      - 'v*'    # 只有推送 v 开头的 tag 时触发，比如 v1.0.0
-  workflow_dispatch:  # 手动触发也行
+      - 'v*'    # 只有推 v* 的 tag 时触发
+  workflow_dispatch:
 
 jobs:
   create-release:
@@ -14,20 +17,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "Release ${{ github.ref_name }}"
           body: "自动构建的发布版本：${{ github.ref_name }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push-docker:
     name: 构建并推送 Docker 镜像
     runs-on: ubuntu-latest
-    needs: create-release   # 等 Release 先创建完成再执行
+    needs: create-release
 
     steps:
       - name: Checkout code
@@ -50,5 +54,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/xin2:latest
-            # 镜像 tag 与 git tag 保持一致，例如 v1.0.0
             ${{ secrets.DOCKERHUB_USERNAME }}/xin2:${{ github.ref_name }}

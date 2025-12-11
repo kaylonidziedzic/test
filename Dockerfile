@@ -19,8 +19,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 3. 创建日志目录
-RUN mkdir -p logs
+# 3. 创建日志和数据目录
+RUN mkdir -p logs data
 
 # 4. 复制代码
 COPY . .

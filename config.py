@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # 缓存配置
     COOKIE_EXPIRE_SECONDS: int = 1800  # Cookie 30分钟过期
+    CACHE_DB_PATH: str = "data/cache.db"  # SQLite 数据库路径
 
     class Config:
         env_file = ".env"

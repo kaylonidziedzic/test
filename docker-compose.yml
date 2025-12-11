@@ -9,6 +9,8 @@ services:
     environment:
       - API_KEY=${API_KEY:-change_me_please}
       - HEADLESS=false
+    volumes:
+      - ./data:/app/data  # 持久化缓存数据库
     restart: unless-stopped
     # 当健康检查失败时，Docker 会自动重启容器
     # 配合 Dockerfile 中的 HEALTHCHECK 使用

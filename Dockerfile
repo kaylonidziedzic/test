@@ -25,5 +25,10 @@ RUN mkdir -p logs
 # 4. 复制代码
 COPY . .
 
-# 5. 启动
+# 5. 健康检查
+# 每 30 秒检查一次，超时 10 秒，启动后等待 30 秒，连续 3 次失败则标记为不健康
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python /app/healthcheck.py || exit 1
+
+# 6. 启动
 CMD ["python", "main.py"]

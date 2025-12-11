@@ -1,16 +1,54 @@
 """Proxy service layer wrapping curl_cffi and browser-based fallbacks.
 
 尽量保持原有行为不变，仅增加类型标注与注释，便于维护和阅读。
+
+=============================================================================
+TLS 指纹与 Cookie 复用方案说明 (针对 69书吧 等 Cloudflare 防护站点)
+=============================================================================
+
+问题背景:
+  - 浏览器过盾后获取 cookie，再用 HTTP 库二次请求
+  - 某些站点 (如 69书吧) 会检测 TLS 指纹与 cookie 的一致性
+
+已测试方案:
+
+  【方案1】不使用 impersonate (当前采用) ✅
+    - curl_cffi 不指定 impersonate 参数，使用默认 TLS 指纹
+    - 测试结果: 69书吧正文页可正常访问
+    - 优点: 简单，不需要匹配浏览器版本
+    - 缺点: 某些严格检测 TLS 指纹的站点可能失败
+
+  【方案2】使用普通 requests 库 (备选)
+    - 将 curl_cffi 替换为标准 requests 库
+    - 适用场景: 如果方案1失败，可尝试此方案
+    - 修改方式: 将 "from curl_cffi import requests" 改为 "import requests"
+    - 注意: 需要同时移除 impersonate 参数
+
+  【方案3】匹配浏览器版本的 impersonate (备选)
+    - 根据实际 Chrome 版本设置对应的 impersonate
+    - 例如: Chrome 143 对应 impersonate="chrome120" (curl_cffi 最新支持版本)
+    - 适用场景: 站点严格检测 TLS 指纹时
+    - 注意: curl_cffi 的 impersonate 版本可能落后于实际 Chrome 版本
+
+  【方案4】浏览器直读 (最后手段)
+    - 完全不用 HTTP 库，直接从浏览器获取页面 HTML
+    - 优点: 100% 绕过 TLS 指纹检测
+    - 缺点: 资源消耗大，并发能力差
+    - 代码位置: 下方 "69shuba.com" 特殊处理块 (已禁用)
+
+=============================================================================
 """
 
 import time
 from typing import Any, Dict, Optional
-from urllib.parse import urlparse  # [CHANGED] 根据域名做特殊逻辑
+from urllib.parse import urlparse
 
-from curl_cffi import requests  # ✅ 使用支持指纹模拟的 requests
+from curl_cffi import requests  # 支持 TLS 指纹模拟的 requests
+# 【方案2备选】如需使用标准 requests，取消下行注释并注释上行:
+# import requests
 
 from config import settings
-from core.browser import browser_manager  # [CHANGED] 为 69 直接用浏览器拿页面做准备
+from core.browser import browser_manager
 from core.solver import solve_turnstile
 from utils.logger import log
 
@@ -64,13 +102,17 @@ def proxy_request(
     hostname = parsed.hostname or ""
 
     # ============================
-    # [CHANGED-69] 69书吧特例：
-    #  - 从日志可以看到：solver 返回的 cookie 没有任何 Cloudflare 通行证
-    #  - curl_cffi impersonate 直接请求也仍然是 CF 的 Just a moment 403
-    #  - 说明目前只有浏览器（DrissionPage）真正通过了 CF + Turnstile
-    #  - 所以这里直接用浏览器拿页面 HTML，绕过 curl_cffi
+    # 【方案4】浏览器直读 (已禁用，仅作为最后手段保留)
+    #
+    # 适用场景: 当 cookie 复用方式完全失效时，可启用此方案
+    # 启用方式: 将 "if False and" 改为 "if"
+    #
+    # 注意事项:
+    #   - 资源消耗大，每次请求都需要浏览器渲染
+    #   - 并发能力差，浏览器实例有限
+    #   - 仅建议对特定域名启用，不要全局使用
     # ============================
-    if "69shuba.com" in hostname:
+    if False and "69shuba.com" in hostname:
         try:
             log.info(f"[proxy-69] 使用浏览器直接获取页面: {url} method={method}")
 
@@ -135,9 +177,11 @@ def proxy_request(
         log.info(f"[proxy] 最终 safe_headers: {safe_headers}")
 
         try:
-            log.info(f"🚀 发起请求 (impersonate='chrome110'): {url}")
+            log.info(f"🚀 发起请求: {url}")
 
-            # 使用 curl_cffi 的 requests
+            # ============================
+            # 【方案1】当前采用: 不使用 impersonate
+            # ============================
             resp = requests.request(
                 method=method,
                 url=url,
@@ -147,7 +191,8 @@ def proxy_request(
                 json=json,
                 timeout=30,
                 allow_redirects=True,
-                impersonate="chrome110",  # 模拟 Chrome 110+ 版本
+                # 【方案3备选】如需启用 TLS 指纹模拟，取消下行注释:
+                # impersonate="chrome120",  # 可选值: chrome110, chrome120, safari15_5 等
             )
 
             # 增强 403/503 调试信息：打印一点内容预览

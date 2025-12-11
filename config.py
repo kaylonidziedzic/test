@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     # 指纹随机化配置
     FINGERPRINT_ENABLED: bool = True  # 是否启用 Canvas/WebGL 指纹随机化
 
+    # 浏览器池配置
+    BROWSER_POOL_MIN: int = 1  # 最小浏览器数量
+    BROWSER_POOL_MAX: int = 3  # 最大浏览器数量
+    BROWSER_POOL_IDLE_TIMEOUT: int = 300  # 空闲超时回收时间 (秒)
+
     class Config:
         env_file = ".env"
 

@@ -10,29 +10,25 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from config import settings
-from core.browser import BrowserManager
+from core.browser_pool import browser_pool
 from routers import health, proxy, raw, reader
 from services.cache_service import credential_cache
 from utils.logger import log
 
 
 async def watchdog_task():
-    """后台看门狗任务：定期清理僵尸进程、检查内存、清理过期缓存"""
+    """后台看门狗任务：定期清理空闲浏览器、清理过期缓存"""
     while True:
         await asyncio.sleep(settings.WATCHDOG_INTERVAL)
         try:
-            # 1. 清理僵尸进程
-            killed = BrowserManager.cleanup_zombie_browsers()
-            if killed > 0:
-                log.info(f"[Watchdog] 清理了 {killed} 个僵尸进程")
+            # 1. 清理空闲浏览器
+            cleaned = browser_pool.cleanup_idle()
+            if cleaned > 0:
+                log.info(f"[Watchdog] 回收了 {cleaned} 个空闲浏览器")
 
-            # 2. 检查内存使用
-            mem_mb = BrowserManager.get_memory_usage_mb()
-            if mem_mb > 0:
-                log.info(f"[Watchdog] 浏览器内存使用: {mem_mb:.1f} MB")
-                if mem_mb > settings.MEMORY_LIMIT_MB:
-                    log.warning(f"[Watchdog] 内存超限 ({mem_mb:.1f} > {settings.MEMORY_LIMIT_MB} MB)，重启浏览器")
-                    BrowserManager.restart()
+            # 2. 记录浏览器池状态
+            stats = browser_pool.get_stats()
+            log.info(f"[Watchdog] 浏览器池状态: {stats}")
 
             # 3. 清理过期缓存
             expired = credential_cache.cleanup_expired()
@@ -59,6 +55,10 @@ async def lifespan(app: FastAPI):
         await task
     except asyncio.CancelledError:
         pass
+
+    # 关闭浏览器池
+    log.info("[Shutdown] 关闭浏览器池...")
+    browser_pool.shutdown()
 
 
 app = FastAPI(title=settings.API_TITLE, version="2.0.0", lifespan=lifespan)

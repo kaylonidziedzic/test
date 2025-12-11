@@ -29,15 +29,16 @@ def proxy_handler(req: ProxyRequest) -> JSONResponse:
             json=req.json_body,
         )
 
-        apparent_enc = getattr(resp, "apparent_encoding", None)
-        text = decode_response(resp.content, apparent_enc)
+        # 兼容 FetchResponse 和原始 Response 对象
+        text = resp.text if hasattr(resp, 'text') else decode_response(resp.content, getattr(resp, "apparent_encoding", None))
+        cookies = resp.cookies if isinstance(resp.cookies, dict) else (resp.cookies.get_dict() if hasattr(resp.cookies, 'get_dict') else dict(resp.cookies))
 
         return JSONResponse(
             content={
                 "status": resp.status_code,
                 "url": str(resp.url),
                 "headers": dict(resp.headers),
-                "cookies": resp.cookies.get_dict(),
+                "cookies": cookies,
                 "encoding": resp.encoding or "unknown",
                 "text": text,
             }

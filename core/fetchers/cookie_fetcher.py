@@ -1,0 +1,170 @@
+"""
+Cookie Fetcher - 基于 Cookie 复用的页面获取器
+
+工作流程:
+1. 浏览器访问目标站点，完成 Cloudflare 等验证
+2. 提取浏览器的 Cookie 和 User-Agent
+3. 使用 HTTP 库 (curl_cffi) 携带 Cookie 发起请求
+
+优点:
+- 高效，浏览器只需过盾一次，后续请求复用 Cookie
+- 支持高并发
+
+缺点:
+- 某些站点可能检测 TLS 指纹与 Cookie 的一致性
+- Cookie 有过期时间，需要定期刷新
+
+TLS 指纹方案说明:
+- 方案1 (当前): 不使用 impersonate，使用 curl_cffi 默认指纹
+- 方案2 (备选): 使用标准 requests 库
+- 方案3 (备选): 使用 impersonate 模拟特定浏览器版本
+"""
+
+from typing import Any, Dict, Optional
+
+from curl_cffi import requests as curl_requests
+# 方案2备选: 使用标准 requests
+# import requests as std_requests
+
+from .base import BaseFetcher, FetchResponse
+from core.solver import solve_turnstile
+from services.cache_service import credential_cache
+from utils.logger import log
+
+
+class CookieFetcher(BaseFetcher):
+    """基于 Cookie 复用的 Fetcher
+
+    这是默认的获取策略，适用于大多数 Cloudflare 保护的站点。
+    """
+
+    def __init__(
+        self,
+        retries: int = 1,
+        timeout: int = 30,
+        impersonate: Optional[str] = None,
+    ):
+        """
+        Args:
+            retries: 失败重试次数
+            timeout: 请求超时时间 (秒)
+            impersonate: TLS 指纹模拟 (None=不模拟, "chrome120"=模拟 Chrome 120)
+        """
+        self.retries = retries
+        self.timeout = timeout
+        self.impersonate = impersonate
+
+    @property
+    def name(self) -> str:
+        return "CookieFetcher"
+
+    def fetch(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> FetchResponse:
+        """使用 Cookie 复用方式获取页面"""
+        headers = headers or {}
+
+        for attempt in range(self.retries + 1):
+            force_refresh = attempt > 0
+
+            # 1. 获取凭证 (Cookie + UA)
+            creds = credential_cache.get_credentials(url, force_refresh=force_refresh)
+
+            # 2. 构造安全的请求头
+            safe_headers = self._build_safe_headers(headers, creds["ua"])
+
+            # 3. 发起请求
+            log.info(f"[{self.name}] 发起请求: {url} (尝试 {attempt + 1}/{self.retries + 1})")
+
+            try:
+                resp = self._do_request(
+                    url=url,
+                    method=method,
+                    headers=safe_headers,
+                    cookies=creds["cookies"],
+                    data=data,
+                    json=json,
+                )
+
+                # 4. 检查是否被拦截
+                if self._is_blocked(resp):
+                    if attempt < self.retries:
+                        log.warning(f"[{self.name}] 被拦截，刷新缓存重试...")
+                        continue
+                    else:
+                        log.error(f"[{self.name}] 重试后仍被拦截")
+
+                return resp
+
+            except Exception as e:
+                log.error(f"[{self.name}] 请求异常: {e}")
+                if attempt == self.retries:
+                    raise
+
+        # 不应该到达这里
+        raise Exception("Unexpected error in CookieFetcher")
+
+    def _build_safe_headers(
+        self, headers: Dict[str, str], ua: str
+    ) -> Dict[str, str]:
+        """构造安全的请求头，过滤可能冲突的字段"""
+        blocked_headers = {
+            "host",
+            "content-length",
+            "user-agent",
+            "accept-encoding",
+            "cookie",
+        }
+        safe = {k: v for k, v in headers.items() if k.lower() not in blocked_headers}
+        safe["User-Agent"] = ua
+        return safe
+
+    def _do_request(
+        self,
+        url: str,
+        method: str,
+        headers: Dict[str, str],
+        cookies: Dict[str, str],
+        data: Optional[Dict[str, Any]],
+        json: Optional[Dict[str, Any]],
+    ) -> FetchResponse:
+        """执行实际的 HTTP 请求"""
+        request_kwargs = {
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "cookies": cookies,
+            "data": data,
+            "json": json,
+            "timeout": self.timeout,
+            "allow_redirects": True,
+        }
+
+        # 方案3: 如果指定了 impersonate，添加到请求参数
+        if self.impersonate:
+            request_kwargs["impersonate"] = self.impersonate
+
+        resp = curl_requests.request(**request_kwargs)
+
+        # 转换为统一的 FetchResponse
+        return FetchResponse(
+            status_code=resp.status_code,
+            content=resp.content,
+            text=resp.text,
+            headers=dict(resp.headers),
+            cookies=resp.cookies.get_dict() if hasattr(resp.cookies, 'get_dict') else dict(resp.cookies),
+            url=str(resp.url),
+            encoding=resp.encoding or "utf-8",
+        )
+
+    def _is_blocked(self, resp: FetchResponse) -> bool:
+        """检查响应是否被 Cloudflare 拦截"""
+        if resp.status_code not in [403, 503]:
+            return False
+        return "Just a moment" in resp.text or "Cloudflare" in resp.text

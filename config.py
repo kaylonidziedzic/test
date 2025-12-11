@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     MEMORY_LIMIT_MB: int = 1500  # 浏览器内存超过此值则重启 (MB)
     WATCHDOG_INTERVAL: int = 300  # 看门狗检查间隔 (秒)
 
+    # 指纹随机化配置
+    FINGERPRINT_ENABLED: bool = True  # 是否启用 Canvas/WebGL 指纹随机化
+
     class Config:
         env_file = ".env"
 

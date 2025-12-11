@@ -5,6 +5,7 @@ import sys
 
 from DrissionPage import ChromiumOptions, ChromiumPage
 from config import settings
+from utils.fingerprint import get_fingerprint_script, get_webrtc_disable_script
 from utils.logger import log
 
 # Linux下启动虚拟显示器
@@ -38,10 +39,28 @@ class BrowserManager:
                     cls.page = ChromiumPage(co)
                     cls._managed_pid = cls.page.process_id
                     log.info(f"[Browser] 浏览器进程 PID: {cls._managed_pid}")
+
+                    # 注入指纹随机化脚本
+                    if settings.FINGERPRINT_ENABLED:
+                        cls._inject_fingerprint_scripts()
+                        log.info("[Browser] 指纹随机化已启用")
                 except Exception as e:
                     log.error(f"❌ 浏览器启动失败: {e}")
                     raise e
             return cls.page
+
+    @classmethod
+    def _inject_fingerprint_scripts(cls):
+        """注入指纹随机化脚本"""
+        try:
+            # 使用 add_init_js 在每个页面加载前执行脚本
+            fingerprint_js = get_fingerprint_script()
+            webrtc_js = get_webrtc_disable_script()
+
+            cls.page.add_init_js(fingerprint_js)
+            cls.page.add_init_js(webrtc_js)
+        except Exception as e:
+            log.warning(f"[Browser] 指纹脚本注入失败: {e}")
 
     @classmethod
     def restart(cls):

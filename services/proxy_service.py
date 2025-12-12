@@ -111,6 +111,7 @@ def proxy_request(
     json: Optional[Dict[str, Any]] = None,
     fetcher: Optional[str] = None,
     data_encoding: Optional[str] = None,
+    auto_fallback: bool = True,
 ) -> Union[FetchResponse, Any]:
     """代理请求核心接口
 
@@ -123,6 +124,7 @@ def proxy_request(
         fetcher: 指定使用的 Fetcher ("cookie" 或 "browser")，
                  默认根据域名规则自动选择
         data_encoding: POST data 编码，如 "gbk"、"gb2312"，默认自动检测
+        auto_fallback: CookieFetcher 失败后是否自动降级到 BrowserFetcher
 
     Returns:
         FetchResponse: 响应对象
@@ -142,29 +144,88 @@ def proxy_request(
 
     # 选择 Fetcher
     if fetcher:
-        # 显式指定
+        # 显式指定，不自动降级
         selected_fetcher = get_fetcher(fetcher)
+        use_fallback = False
     elif _should_use_browser(hostname):
-        # 域名规则匹配
+        # 域名白名单匹配，直接使用浏览器
         selected_fetcher = _browser_fetcher
+        use_fallback = False
         log.info(f"[ProxyService] 域名 {hostname} 匹配浏览器直读规则")
     else:
-        # 默认使用 Cookie 方式
+        # 默认使用 Cookie 方式，支持自动降级
         selected_fetcher = _default_fetcher
+        use_fallback = auto_fallback
 
     log.info(f"[ProxyService] 使用 {selected_fetcher.name} 处理请求: {url}")
 
     # 执行请求
-    response = selected_fetcher.fetch(
-        url=url,
-        method=method,
-        headers=headers,
-        data=data,
-        json=json,
-        data_encoding=data_encoding,
-    )
+    try:
+        response = selected_fetcher.fetch(
+            url=url,
+            method=method,
+            headers=headers,
+            data=data,
+            json=json,
+            data_encoding=data_encoding,
+        )
 
-    return response
+        # 检查是否被拦截（即使返回了响应）
+        if use_fallback and _is_response_blocked(response):
+            log.warning(f"[ProxyService] CookieFetcher 返回被拦截，降级到 BrowserFetcher")
+            return _fallback_to_browser(url, method, headers, data, json)
+
+        return response
+
+    except Exception as e:
+        # CookieFetcher 异常，尝试降级
+        if use_fallback:
+            log.warning(f"[ProxyService] CookieFetcher 异常: {e}，降级到 BrowserFetcher")
+            return _fallback_to_browser(url, method, headers, data, json)
+        raise
+
+
+def _is_response_blocked(resp: FetchResponse) -> bool:
+    """检查响应是否被拦截"""
+    if resp.status_code in [403, 503, 429]:
+        return True
+
+    # 检查页面内容特征
+    check_text = resp.text[:10000] if len(resp.text) > 10000 else resp.text
+    blocked_patterns = [
+        "cf-turnstile",
+        "challenge-platform",
+        "_cf_chl_opt",
+        "challenges.cloudflare.com/turnstile",
+    ]
+    for pattern in blocked_patterns:
+        if pattern in check_text:
+            return True
+
+    return False
+
+
+def _fallback_to_browser(
+    url: str,
+    method: str,
+    headers: Optional[Dict[str, str]],
+    data: Optional[Dict[str, Any]],
+    json: Optional[Dict[str, Any]],
+) -> FetchResponse:
+    """降级到浏览器直读
+
+    注意: BrowserFetcher 目前只支持 GET 请求。
+    对于 POST 请求，会记录警告但仍尝试获取页面。
+    """
+    if method.upper() != "GET":
+        log.warning(f"[ProxyService] 降级到 BrowserFetcher，但 {method} 请求将被当作 GET 处理")
+
+    log.info(f"[ProxyService] 降级使用 BrowserFetcher 处理请求: {url}")
+    return _browser_fetcher.fetch(
+        url=url,
+        method="GET",  # BrowserFetcher 只支持 GET
+        headers=headers or {},
+    )
 
 
 # ============================================================================

@@ -160,11 +160,20 @@ class CookieFetcher(BaseFetcher):
         # 处理 data 编码（如 GBK）
         request_data = data
         if data and data_encoding:
-            from urllib.parse import urlencode
-            # 将 dict 转为 URL 编码字符串，使用指定编码
-            encoded_str = urlencode(data, encoding=data_encoding)
-            request_data = encoded_str
-            log.info(f"[{self.name}] 使用 {data_encoding} 编码 POST 数据")
+            from urllib.parse import urlencode, parse_qs
+            if isinstance(data, dict):
+                # dict 直接编码
+                encoded_str = urlencode(data, encoding=data_encoding)
+                request_data = encoded_str
+                log.info(f"[{self.name}] 使用 {data_encoding} 编码 POST 数据 (dict)")
+            elif isinstance(data, str):
+                # 字符串需要先解析再重新编码
+                parsed = parse_qs(data, keep_blank_values=True)
+                # parse_qs 返回 {key: [value]} 格式，转为 {key: value}
+                flat_dict = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+                encoded_str = urlencode(flat_dict, encoding=data_encoding)
+                request_data = encoded_str
+                log.info(f"[{self.name}] 使用 {data_encoding} 编码 POST 数据 (str -> re-encode)")
 
         request_kwargs = {
             "method": method,

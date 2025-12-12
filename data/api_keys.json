@@ -1,0 +1,17 @@
+[
+  {
+    "user": "owner",
+    "key": "admin-change-this",
+    "role": "admin"
+  },
+  {
+    "user": "client",
+    "key": "client-change-this",
+    "role": "user"
+  },
+  {
+    "user": "12133",
+    "key": "8RrQrYt9zSZnNSJOi_7y1V5dwIq8nyNyqhOcS6f2q9c",
+    "role": "user"
+  }
+]

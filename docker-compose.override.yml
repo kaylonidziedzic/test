@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  cf-gateway:
+    # 本地开发覆盖：静态文件和后端热重载，前端改动即时生效
+    volumes:
+      - "./static:/app/static"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

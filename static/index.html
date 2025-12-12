@@ -90,7 +90,7 @@
                 </div>
 
                 <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                    <div v-for="tab in tabs" :key="tab.id" @click="switchTab(tab.id)"
+                    <div v-for="tab in visibleTabs" :key="tab.id" @click="switchTab(tab.id)"
                         :class="['flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all',
                             activeTab === tab.id ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900']">
                         <i :class="[tab.icon, 'text-lg', activeTab === tab.id ? 'text-blue-500' : '']"></i>
@@ -114,7 +114,7 @@
             <!-- Mobile Nav -->
             <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40">
                 <div class="flex items-center justify-around px-2">
-                    <button v-for="tab in tabs.slice(0, 5)" :key="tab.id" @click="switchTab(tab.id)"
+                    <button v-for="tab in visibleTabs.slice(0, 5)" :key="tab.id" @click="switchTab(tab.id)"
                         :class="['flex flex-col items-center py-2 px-3 text-xs font-medium relative',
                             activeTab === tab.id ? 'text-blue-600' : 'text-zinc-500']">
                         <i :class="[tab.icon, 'text-xl mb-0.5']"></i>
@@ -132,12 +132,35 @@
                         <p class="text-xs text-zinc-500 hidden sm:block">{{ currentTabDesc }}</p>
                     </div>
                     <div class="flex items-center gap-3">
+                        <div class="hidden xl:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                            <i class="ri-link text-zinc-400 text-sm"></i>
+                            <input v-model="apiBaseUrl" type="text" placeholder="后端地址，例如 http://localhost:8000"
+                                class="bg-transparent text-xs text-zinc-900 placeholder-zinc-500 outline-none w-56">
+                            <button @click="saveBaseUrl" class="text-xs text-blue-600 hover:text-blue-500 font-semibold">保存</button>
+                        </div>
+                        <div class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                            <span :class="['w-2 h-2 rounded-full', sseConnected ? 'bg-green-500 animate-pulse' : autoRefresh ? 'bg-amber-500' : 'bg-zinc-300']"></span>
+                            <span class="text-[11px] text-zinc-600 font-medium">{{ sseConnected ? 'SSE 已连接' : autoRefresh ? '轮询中' : '已暂停' }}</span>
+                        </div>
                         <div class="hidden md:flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-lg px-3 py-1.5">
                             <i class="ri-search-line text-zinc-400 text-sm"></i>
                             <input v-model="searchQuery" type="text" placeholder="搜索..."
                                 class="bg-transparent text-xs text-zinc-900 placeholder-zinc-500 outline-none w-32">
                         </div>
+                        <div class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                            <i class="ri-user-line text-zinc-400 text-sm"></i>
+                            <select v-model="requestUserFilter" class="bg-transparent text-xs text-zinc-900 outline-none">
+                                <option value="all">全部用户</option>
+                                <option v-for="u in userOptions" :key="u" :value="u">{{ u }}</option>
+                            </select>
+                        </div>
                         <span class="hidden sm:inline text-xs text-zinc-500 font-mono">v{{ status.version || '4.3.0' }}</span>
+                        <button @click="toggleAutoRefresh" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                            <i :class="[autoRefresh ? 'ri-pause-line' : 'ri-play-line', 'text-sm']"></i>
+                        </button>
+                        <button @click="muteErrors()" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all" title="静音错误提示 60 秒">
+                            <i class="ri-volume-mute-line text-sm"></i>
+                        </button>
                         <button @click="loadData" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
                             <i class="ri-refresh-line text-sm"></i>
                         </button>
@@ -258,14 +281,89 @@
                             </div>
                         </div>
 
+                        <!-- USERS (Admin Only) -->
+                        <div v-if="activeTab === 'users'" class="space-y-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2"><i class="ri-key-2-line text-blue-600"></i> 用户与密钥</h3>
+                                        <p class="text-xs text-zinc-500 mt-1">仅文件存储部分可管理，环境变量中的密钥视为只读</p>
+                                    </div>
+                                    <button @click="loadUsers" :disabled="userLoading"
+                                        class="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-2">
+                                        <i class="ri-refresh-line"></i> 刷新
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    <div class="lg:col-span-2">
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full text-sm">
+                                                <thead>
+                                                    <tr class="text-left text-zinc-500">
+                                                        <th class="py-2">用户</th>
+                                                        <th class="py-2">角色</th>
+                                                        <th class="py-2">Key</th>
+                                                        <th class="py-2 text-right">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr v-for="u in apiUsers" :key="u.user" class="border-t border-zinc-100">
+                                                        <td class="py-2 font-medium text-zinc-900">{{ u.user }}</td>
+                                                        <td class="py-2 text-xs">
+                                                            <span :class="['px-2 py-1 rounded-full font-semibold', u.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700']">
+                                                                {{ u.role || 'user' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="py-2 font-mono text-[11px] text-zinc-700 break-all">
+                                                            {{ u.key }}
+                                                        </td>
+                                                        <td class="py-2 text-right flex items-center gap-2 justify-end">
+                                                            <button @click="rotateUser(u)" class="text-xs px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded border border-zinc-200" :disabled="rotatingUser===u.user">
+                                                                {{ rotatingUser===u.user ? '重置中...' : '重置 Key' }}
+                                                            </button>
+                                                            <button @click="deleteUser(u)" class="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200">删除</button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr v-if="!apiUsers.length">
+                                                        <td colspan="4" class="py-4 text-center text-zinc-500 text-xs">暂无可管理用户</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+                                        <h4 class="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2"><i class="ri-user-add-line text-green-600"></i> 创建用户</h4>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-zinc-700 mb-1">用户名</label>
+                                                <input v-model="newUserName" class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-zinc-700 mb-1">角色</label>
+                                                <select v-model="newUserRole" class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="user">user</option>
+                                                    <option value="admin">admin</option>
+                                                </select>
+                                            </div>
+                                            <button @click="createUser" :disabled="userLoading"
+                                                class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                                                <i class="ri-add-line"></i> 创建并生成 Key
+                                            </button>
+                                            <p class="text-[11px] text-zinc-500">提示：环境变量中的密钥不可在此删除/修改，仅显示文件存储的用户。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- LOGS -->
-                        <div v-if="activeTab === 'logs'" class="space-y-6">
+                        <div v-if="activeTab === 'logs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
                                 <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
                                     <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900">系统日志</h3>
-                                        <p class="text-xs text-zinc-500 mt-0.5">
-                                            <i class="ri-pulse-line mr-1"></i>实时服务器日志（每3秒自动刷新）
+                                        <h3 class="text-sm font-semibold text-zinc-900">全局日志</h3>
+                                        <p class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
+                                            <i class="ri-pulse-line"></i> 实时服务器日志（SSE 优先，断开回退轮询）
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-2">
@@ -284,13 +382,42 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="h-[600px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
+                                <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
                                     <div v-for="(log, i) in filteredLogs" :key="i" :class="['log-line', `log-${log.level}`]">
                                         <span class="text-zinc-500">[{{ log.timestamp }}]</span>
                                         <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
                                         <span class="ml-2">{{ log.message }}</span>
                                     </div>
                                     <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                                <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900">用户日志</h3>
+                                        <p class="text-xs text-zinc-500 mt-0.5">仅显示当前筛选用户的日志</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <select v-model="logFilter" class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                            <option value="all">所有级别</option>
+                                            <option value="info">信息</option>
+                                            <option value="warning">警告</option>
+                                            <option value="error">错误</option>
+                                            <option value="success">成功</option>
+                                        </select>
+                                        <button @click="exportLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                            <i class="ri-download-line"></i> 导出
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
+                                    <div v-for="(log, i) in filteredUserLogs" :key="i" :class="['log-line', `log-${log.level}`]">
+                                        <span class="text-zinc-500">[{{ log.timestamp }}]</span>
+                                        <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
+                                        <span class="ml-2">{{ log.message }}</span>
+                                    </div>
+                                    <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">暂无该用户日志</div>
                                 </div>
                             </div>
                         </div>
@@ -546,17 +673,22 @@
                                 <textarea v-model="batchTestUrls"
                                     class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none mb-4 h-36 resize-none font-mono placeholder-zinc-400"
                                     placeholder="每行一个 URL...&#10;https://example1.com&#10;https://example2.com"></textarea>
-                                <div class="flex justify-between items-center">
-                                    <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
-                                        <i class="ri-checkbox-circle-fill text-green-500"></i>
-                                        {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
-                                    </span>
-                                    <button @click="batchTestBypass" :disabled="batchTesting"
-                                        class="ml-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
-                                        <i v-if="!batchTesting" class="ri-play-list-line"></i>
-                                        <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
-                                    </button>
-                                </div>
+                                    <div class="flex justify-between items-center">
+                                        <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
+                                            <i class="ri-checkbox-circle-fill text-green-500"></i>
+                                            {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
+                                        </span>
+                                        <div class="flex items-center gap-3 ml-auto">
+                                            <div v-if="batchTesting" class="text-xs text-zinc-500 flex items-center gap-2">
+                                                <span class="loader w-4 h-4"></span> {{ batchProgress }}%
+                                            </div>
+                                            <button @click="batchTestBypass" :disabled="batchTesting"
+                                                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                                <i v-if="!batchTesting" class="ri-play-list-line"></i>
+                                                <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
                             </div>
 
                             <div class="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
@@ -742,10 +874,13 @@
         createApp({
             setup() {
                 const authenticated = ref(false), apiKey = ref(''), loading = ref(false), loginError = ref('');
+                const apiBaseUrl = ref('');
+                const autoRefresh = ref(true);
+                const sseConnected = ref(false);
                 const activeTab = ref('monitor'), saving = ref(false), testing = ref(false);
                 const testUrl = ref(''), testResult = ref(null);
-                const batchTesting = ref(false), batchTestUrls = ref(''), batchTestResults = ref(null);
-                const selectedRequest = ref(null), searchQuery = ref(''), logFilter = ref('all');
+                const batchTesting = ref(false), batchTestUrls = ref(''), batchTestResults = ref(null), batchProgress = ref(0);
+                const selectedRequest = ref(null), searchQuery = ref(''), logFilter = ref('all'), requestUserFilter = ref('all');
 
                 const tabs = [
                     { id: 'monitor', name: '总览', icon: 'ri-dashboard-3-line', desc: '实时监控和数据分析' },
@@ -753,13 +888,18 @@
                     { id: 'pool', name: '实例池', icon: 'ri-cpu-line', desc: '浏览器池管理' },
                     { id: 'cache', name: '缓存', icon: 'ri-database-2-line', desc: '缓存统计' },
                     { id: 'config', name: '配置', icon: 'ri-settings-4-line', desc: '系统配置' },
-                    { id: 'actions', name: '操作', icon: 'ri-flashlight-line', desc: '测试和操作工具' }
+                    { id: 'actions', name: '操作', icon: 'ri-flashlight-line', desc: '测试和操作工具' },
+                    { id: 'users', name: '用户/密钥', icon: 'ri-key-2-line', desc: '管理 API Key 和权限', adminOnly: true },
                 ];
 
                 const status = reactive({}), stats = reactive({}), config = reactive({}), timeSeries = reactive([]);
                 const requestHistory = reactive([]), systemInfo = reactive({}), browserPoolInfo = reactive({ instances: [] });
+                const apiUsers = reactive([]);
+                const newUserName = ref(''), newUserRole = ref('user');
+                const userLoading = ref(false), rotatingUser = ref('');
                 const toast = reactive({ show: false, message: '', type: 'success' }), logs = reactive([]);
-                let refreshInterval = null;
+                const userLogs = reactive([]);
+                let refreshInterval = null, lastErrorToast = 0, errorMuteUntil = 0, eventSource = null, logEventSource = null;
 
                 const requestDistribution = computed(() => {
                     const t = stats.requests?.total || 0, s = stats.requests?.success || 0, f = stats.requests?.failed || 0;
@@ -769,58 +909,219 @@
                     ];
                 });
 
+                const userOptions = computed(() => [...new Set([
+                    ...requestHistory.map(r => r.user || '未知'),
+                    ...apiUsers.map(u => u.user || '未知')
+                ])].filter(Boolean));
+
                 const filteredRequests = computed(() => {
-                    if (!searchQuery.value) return requestHistory;
+                    let list = requestHistory;
+                    if (requestUserFilter.value !== 'all') {
+                        list = list.filter(r => (r.user || '未知') === requestUserFilter.value);
+                    }
+                    if (!searchQuery.value) return list;
                     const q = searchQuery.value.toLowerCase();
-                    return requestHistory.filter(r => r.url.toLowerCase().includes(q) || r.timestamp.includes(q));
+                    return list.filter(r => r.url.toLowerCase().includes(q) || r.timestamp.includes(q));
                 });
 
-                const filteredLogs = computed(() => logFilter.value === 'all' ? logs : logs.filter(l => l.level === logFilter.value));
-                const currentTabName = computed(() => tabs.find(t => t.id === activeTab.value)?.name);
-                const currentTabDesc = computed(() => tabs.find(t => t.id === activeTab.value)?.desc);
+                const filteredLogs = computed(() => (logFilter.value === 'all' ? logs : logs.filter(l => l.level === logFilter.value)));
+                const filteredUserLogs = computed(() => (logFilter.value === 'all' ? userLogs : userLogs.filter(l => l.level === logFilter.value)));
+
+                const isAdmin = computed(() => status.current_user?.role === 'admin');
+                const visibleTabs = computed(() => tabs.filter(t => !t.adminOnly || isAdmin.value));
+                const currentTabName = computed(() => visibleTabs.value.find(t => t.id === activeTab.value)?.name);
+                const currentTabDesc = computed(() => visibleTabs.value.find(t => t.id === activeTab.value)?.desc);
 
                 const showToast = (msg, type = 'success') => {
                     toast.message = msg; toast.type = type; toast.show = true;
                     setTimeout(() => toast.show = false, 3500);
                 };
 
-                const api = async (path, opts = {}) => {
-                    const res = await fetch(`/api/dashboard${path}`, {
-                        ...opts, headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
-                    });
-                    if (!res.ok) throw new Error(await res.text());
-                    return res.json();
+                const notifyError = (msg) => {
+                    const now = Date.now();
+                    if (now < errorMuteUntil) return;
+                    if (now - lastErrorToast > 5000) {
+                        showToast(msg, 'error');
+                        lastErrorToast = now;
+                    }
+                };
+
+                const muteErrors = (ms = 60000) => {
+                    errorMuteUntil = Date.now() + ms;
+                    showToast(`错误提示已静音 ${ms/1000} 秒`, 'info');
+                };
+
+                const buildUrl = (path) => {
+                    const base = apiBaseUrl.value.trim().replace(/\/$/, '');
+                    return `${base}${path.startsWith('/') ? path : '/' + path}`;
+                };
+
+                const api = async (path, opts = {}, timeoutMs = 10000) => {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), timeoutMs);
+                    try {
+                        const res = await fetch(buildUrl(`/api/dashboard${path}`), {
+                            ...opts,
+                            signal: controller.signal,
+                            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
+                        });
+                        if (!res.ok) {
+                            const text = await res.text();
+                            throw new Error(text || `请求失败 (${res.status})`);
+                        }
+                        return res.json();
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw new Error('请求超时，请检查网络或后端状态');
+                        throw e;
+                    } finally {
+                        clearTimeout(timer);
+                    }
                 };
 
                 const loadData = async () => {
                     if (!authenticated.value) return;
                     try {
+                        const userParam = requestUserFilter.value !== 'all' ? `&user=${encodeURIComponent(requestUserFilter.value)}` : '';
                         const [s, st, c, ts, h, sys, bp, l] = await Promise.all([
                             api('/status'), api('/stats'), api('/config'), api('/time-series'),
-                            api('/history'), api('/system'), api('/browser-pool'), api('/logs?limit=100')
+                            api(`/history${requestUserFilter.value !== 'all' ? '?user='+requestUserFilter.value : ''}`), api('/system'), api('/browser-pool'), api(`/logs?limit=200${userParam}`)
                         ]);
                         Object.assign(status, s); Object.assign(stats, st); Object.assign(config, c);
                         timeSeries.splice(0, timeSeries.length, ...ts);
                         requestHistory.splice(0, requestHistory.length, ...h);
                         Object.assign(systemInfo, sys); Object.assign(browserPoolInfo, bp);
-                        logs.splice(0, logs.length, ...l);
+                        logs.splice(0, logs.length, ...(l.all || []));
+                        userLogs.splice(0, userLogs.length, ...(l.user || []));
+                        if (isAdmin.value) await loadUsers();
                     } catch (e) {
                         if (e.message.includes('401')) {
                             authenticated.value = false;
                             clearInterval(refreshInterval);
                             showToast('会话已过期', 'error');
+                        } else {
+                            notifyError(e.message || '请求失败，请检查网络或后端状态');
                         }
                     }
+                };
+
+                const stopPolling = () => {
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                        refreshInterval = null;
+                    }
+                };
+
+                const startPolling = (notify = false) => {
+                    stopPolling();
+                    if (!autoRefresh.value) return;
+                    refreshInterval = setInterval(loadData, 4000);
+                    if (notify) showToast('SSE 断开，已回退轮询', 'error');
+                };
+
+                const applySnapshot = (data) => {
+                    if (!data) return;
+                    if (data.status) {
+                        const prevUser = status.current_user;
+                        Object.assign(status, data.status);
+                        if (!data.status.current_user && prevUser) status.current_user = prevUser;
+                    }
+                    if (data.stats) Object.assign(stats, data.stats);
+                    if (data.config) Object.assign(config, data.config);
+                    if (data.time_series) { timeSeries.splice(0, timeSeries.length, ...(data.time_series || [])); }
+                    if (data.history) { requestHistory.splice(0, requestHistory.length, ...(data.history || [])); }
+                    if (data.system) Object.assign(systemInfo, data.system);
+                    if (data.browser_pool) Object.assign(browserPoolInfo, data.browser_pool);
+                    if (data.logs) { logs.splice(0, logs.length, ...(data.logs || [])); }
+                };
+
+                const closeStream = () => {
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    sseConnected.value = false;
+                };
+
+                const closeLogStream = () => {
+                    if (logEventSource) {
+                        logEventSource.close();
+                        logEventSource = null;
+                    }
+                };
+
+                const connectLogStream = () => {
+                    if (activeTab.value !== 'logs' || !authenticated.value) return;
+                    if (typeof EventSource === 'undefined') return;
+                    closeLogStream();
+                    const userParam = requestUserFilter.value !== 'all' ? `&user=${encodeURIComponent(requestUserFilter.value)}` : '';
+                    const url = buildUrl(`/api/dashboard/logs/stream?key=${encodeURIComponent(apiKey.value)}${userParam}`);
+                    logEventSource = new EventSource(url);
+                    logEventSource.onmessage = (ev) => {
+                        try {
+                            const data = JSON.parse(ev.data);
+                            if (data.all) {
+                                logs.push(...data.all);
+                                if (logs.length > 400) logs.splice(0, logs.length - 400);
+                            }
+                            if (data.user) {
+                                userLogs.push(...data.user);
+                                if (userLogs.length > 400) userLogs.splice(0, userLogs.length - 400);
+                            }
+                        } catch (err) {
+                            console.error('Log SSE parse error', err);
+                        }
+                    };
+                    logEventSource.onerror = () => {
+                        closeLogStream();
+                        notifyError('日志流已断开，切换到轮询');
+                        loadData();
+                    };
+                };
+
+                const connectStream = () => {
+                    if (!autoRefresh.value || !authenticated.value) return;
+                    if (typeof EventSource === 'undefined') {
+                        startPolling();
+                        return;
+                    }
+                    closeStream();
+                    const url = buildUrl(`/api/dashboard/stream?key=${encodeURIComponent(apiKey.value)}`);
+                    eventSource = new EventSource(url);
+                    eventSource.onopen = () => {
+                        sseConnected.value = true;
+                        stopPolling(); // SSE 已连接，暂停轮询
+                    };
+                    eventSource.onmessage = (ev) => {
+                        try {
+                            const data = JSON.parse(ev.data);
+                            applySnapshot(data);
+                        } catch (err) {
+                            console.error('SSE parse error', err);
+                        }
+                    };
+                    eventSource.onerror = () => {
+                        sseConnected.value = false;
+                        closeStream();
+                        startPolling(true);
+                    };
                 };
 
                 const login = async () => {
                     loading.value = true; loginError.value = '';
                     try {
-                        await api('/status');
+                        const s = await api('/status');
+                        Object.assign(status, s);
+                        if (status.current_user?.role !== 'admin') {
+                            loginError.value = '非管理员无权访问控制台';
+                            authenticated.value = false;
+                            return;
+                        }
                         authenticated.value = true;
                         localStorage.setItem('apiKey', apiKey.value);
                         await loadData();
-                        refreshInterval = setInterval(loadData, 3000);
+                        connectStream();
+                        connectLogStream();
+                        if (!sseConnected.value) startPolling();
                         showToast('欢迎回来！', 'success');
                     } catch (e) { loginError.value = 'API 密钥无效'; }
                     finally { loading.value = false; }
@@ -830,13 +1131,80 @@
                     authenticated.value = false; apiKey.value = '';
                     localStorage.removeItem('apiKey');
                     localStorage.removeItem('activeTab');
-                    clearInterval(refreshInterval);
+                    closeStream();
+                    closeLogStream();
+                    stopPolling();
                     showToast('已退出登录', 'info');
                 };
 
                 const switchTab = (tabId) => {
-                    activeTab.value = tabId;
-                    localStorage.setItem('activeTab', tabId);
+                    const allowed = visibleTabs.value.find(t => t.id === tabId);
+                    activeTab.value = allowed ? tabId : 'monitor';
+                    localStorage.setItem('activeTab', activeTab.value);
+                };
+
+                const saveBaseUrl = () => {
+                    const norm = apiBaseUrl.value.trim().replace(/\/$/, '');
+                    apiBaseUrl.value = norm;
+                    localStorage.setItem('apiBaseUrl', norm);
+                    showToast('后端地址已保存', 'success');
+                    if (authenticated.value) loadData();
+                };
+
+                const toggleAutoRefresh = () => {
+                    autoRefresh.value = !autoRefresh.value;
+                    if (!autoRefresh.value) {
+                        closeStream(); stopPolling();
+                        showToast('自动刷新已暂停', 'info');
+                        return;
+                    }
+                    loadData();
+                    connectStream();
+                    if (!sseConnected.value) startPolling();
+                    showToast(autoRefresh.value ? '自动刷新已开启' : '自动刷新已暂停', 'info');
+                };
+
+                const loadUsers = async () => {
+                    if (!isAdmin.value) { apiUsers.splice(0, apiUsers.length); return; }
+                    userLoading.value = true;
+                    try {
+                        const res = await api('/users');
+                        apiUsers.splice(0, apiUsers.length, ...(res.users || []));
+                    } catch (e) { notifyError(e.message || '获取用户列表失败'); }
+                    finally { userLoading.value = false; }
+                };
+
+                const createUser = async () => {
+                    if (!newUserName.value.trim()) { showToast('请输入用户名', 'error'); return; }
+                    userLoading.value = true;
+                    try {
+                        const res = await api('/users', { method: 'POST', body: JSON.stringify({ user: newUserName.value.trim(), role: newUserRole.value }) });
+                        showToast('用户创建成功', 'success');
+                        newUserName.value = ''; newUserRole.value = 'user';
+                        apiUsers.push(res.user);
+                    } catch (e) { notifyError(e.message || '创建用户失败'); }
+                    finally { userLoading.value = false; }
+                };
+
+                const deleteUser = async (user) => {
+                    if (!confirm(`确定删除用户 ${user.user}?`)) return;
+                    try {
+                        await api(`/users/${encodeURIComponent(user.user)}`, { method: 'DELETE' });
+                        const idx = apiUsers.findIndex(u => u.user === user.user);
+                        if (idx >= 0) apiUsers.splice(idx, 1);
+                        showToast('用户已删除', 'success');
+                    } catch (e) { notifyError(e.message || '删除用户失败'); }
+                };
+
+                const rotateUser = async (user) => {
+                    rotatingUser.value = user.user;
+                    try {
+                        const res = await api(`/users/${encodeURIComponent(user.user)}/rotate`, { method: 'POST' });
+                        const idx = apiUsers.findIndex(u => u.user === user.user);
+                        if (idx >= 0) apiUsers[idx].key = res.user.key;
+                        showToast('密钥已重置', 'success');
+                    } catch (e) { notifyError(e.message || '重置密钥失败'); }
+                    finally { rotatingUser.value = ''; }
                 };
 
                 const saveConfig = async () => {
@@ -869,7 +1237,7 @@
                 const testBypass = async () => {
                     testing.value = true; testResult.value = null;
                     try {
-                        testResult.value = await api('/test', { method: 'POST', body: JSON.stringify({ url: testUrl.value }) });
+                        testResult.value = await api('/test', { method: 'POST', body: JSON.stringify({ url: testUrl.value }) }, 60000);
                         showToast(testResult.value.success ? '测试通过！' : '测试失败', testResult.value.success ? 'success' : 'error');
                     } catch(e){
                         testResult.value={success:false, error:e.message};
@@ -880,9 +1248,19 @@
                 const batchTestBypass = async () => {
                     const urls = batchTestUrls.value.split('\n').filter(u=>u.trim());
                     if(!urls.length) { showToast('请至少输入一个 URL', 'error'); return; }
-                    batchTesting.value=true;
+                    batchTesting.value=true; batchProgress.value = 0;
                     try {
-                        batchTestResults.value = await api('/test/batch', { method:'POST', body:JSON.stringify({urls}) });
+                        // 分批次处理，前端分片，避免单次过长
+                        const chunkSize = 3;
+                        const allResults = [];
+                        for (let i=0; i<urls.length; i+=chunkSize) {
+                            const chunk = urls.slice(i, i+chunkSize);
+                            const res = await api('/test/batch', { method:'POST', body:JSON.stringify({urls: chunk}) }, 60000);
+                            allResults.push(...res.results);
+                            batchProgress.value = Math.round(((i+chunk.length)/urls.length)*100);
+                        }
+                        const success = allResults.filter(r=>r.success).length;
+                        batchTestResults.value = { total: allResults.length, success, failed: allResults.length - success, results: allResults };
                         showToast(`批量测试完成: ${batchTestResults.value.success}/${batchTestResults.value.total} 通过`, 'success');
                     } catch(e){ showToast(e.message,'error'); }
                     finally { batchTesting.value=false; }
@@ -937,17 +1315,33 @@
                     return Math.round(b / Math.pow(k, i) * 100) / 100 + ' ' + s[i];
                 };
 
-                // 监听 activeTab 变化，保存到 localStorage
+                // 监听 activeTab 变化，保存到 localStorage & 控制日志流
                 watch(activeTab, (newTab) => {
                     localStorage.setItem('activeTab', newTab);
+                    if (newTab === 'logs') {
+                        connectLogStream();
+                    } else {
+                        closeLogStream();
+                    }
+                });
+
+                watch(requestUserFilter, () => {
+                    if (activeTab.value === 'logs') {
+                        logs.splice(0, logs.length);
+                        connectLogStream();
+                    }
+                    loadData();
                 });
 
                 onMounted(() => {
                     document.getElementById('init-loader').style.display = 'none';
 
+                    const savedBase = localStorage.getItem('apiBaseUrl');
+                    if (savedBase) apiBaseUrl.value = savedBase;
+
                     // 恢复上次的标签页
                     const savedTab = localStorage.getItem('activeTab');
-                    if (savedTab && tabs.find(t => t.id === savedTab)) {
+                    if (savedTab && visibleTabs.value.find(t => t.id === savedTab)) {
                         activeTab.value = savedTab;
                     }
 
@@ -955,16 +1349,18 @@
                     if (k) { apiKey.value = k; login(); }
                 });
 
-                onUnmounted(() => { if (refreshInterval) clearInterval(refreshInterval); });
+                onUnmounted(() => { closeStream(); closeLogStream(); stopPolling(); });
 
                 return {
-                    authenticated, apiKey, loading, loginError, activeTab, tabs, currentTabName, currentTabDesc,
-                    status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo,
-                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults,
-                    selectedRequest, searchQuery, logs, logFilter, filteredLogs, requestDistribution, filteredRequests,
+                    authenticated, apiKey, apiBaseUrl, autoRefresh, sseConnected, loading, loginError, activeTab, tabs, visibleTabs, currentTabName, currentTabDesc,
+                    status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo, requestUserFilter, userOptions, apiUsers, isAdmin,
+                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults, newUserName, newUserRole, userLoading, rotatingUser,
+                    selectedRequest, searchQuery, logs, userLogs, logFilter, filteredLogs, filteredUserLogs, requestDistribution, filteredRequests,
                     login, logout, switchTab, loadData, showRequestDetail: (r) => selectedRequest.value = r,
                     exportRequests, exportLogs, clearLogs, clearAllCache, restartBrowserPool,
-                    testBypass, batchTestBypass, exportConfig, applyPreset, saveConfig, formatBytes
+                    testBypass, batchTestBypass, exportConfig, applyPreset, saveConfig, formatBytes,
+                    saveBaseUrl, toggleAutoRefresh, muteErrors,
+                    loadUsers, createUser, deleteUser, rotateUser
                 };
             }
         }).component('line-chart', LineChart).component('donut-chart', DonutChart).mount('#app');

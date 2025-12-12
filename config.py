@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     # 服务配置
     API_TITLE: str = "CF-Gateway-Pro"
     API_KEY: str = "change_me_please"  # 简单的鉴权密钥
+    API_KEYS_JSON: str = ""  # 多用户 API Key 列表，JSON 字符串 [{"user":"alice","key":"xxx","role":"admin"}]
+    API_KEYS_FILE: str = "data/api_keys.json"  # 多用户 API Key 文件路径
     PORT: int = 8000
     
     # 浏览器配置

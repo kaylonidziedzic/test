@@ -195,7 +195,31 @@ class CookieFetcher(BaseFetcher):
         )
 
     def _is_blocked(self, resp: FetchResponse) -> bool:
-        """检查响应是否被 Cloudflare 拦截"""
-        if resp.status_code not in [403, 503]:
-            return False
-        return "Just a moment" in resp.text or "Cloudflare" in resp.text
+        """检查响应是否被 Cloudflare 或其他反爬机制拦截"""
+        # 1. 检查状态码
+        if resp.status_code in [403, 503, 429]:
+            # Cloudflare 特征
+            if "Just a moment" in resp.text or "Cloudflare" in resp.text:
+                return True
+            # 通用拦截特征
+            if "cf-ray" in resp.headers.get("cf-ray", "").lower():
+                return True
+
+        # 2. 检查响应头中的 Cloudflare 标记
+        if resp.headers.get("cf-mitigated") == "challenge":
+            return True
+
+        # 3. 检查页面内容特征（即使状态码是 200）
+        if resp.status_code == 200 and len(resp.text) < 5000:
+            blocked_patterns = [
+                "window.park",  # 域名停放页面
+                "cf-turnstile",  # Cloudflare Turnstile
+                "challenge-platform",  # Cloudflare 挑战
+                "_cf_chl_opt",  # Cloudflare 挑战选项
+            ]
+            for pattern in blocked_patterns:
+                if pattern in resp.text:
+                    log.warning(f"[{self.name}] 检测到拦截特征: {pattern}")
+                    return True
+
+        return False

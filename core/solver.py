@@ -1,6 +1,10 @@
 import time
+from config import settings
 from core.browser_pool import browser_pool
 from utils.logger import log
+
+# 过盾超时时间（秒），可通过配置覆盖
+SOLVE_TIMEOUT = getattr(settings, 'SOLVE_TIMEOUT', 30)
 
 
 def solve_turnstile(url: str):
@@ -22,26 +26,43 @@ def solve_turnstile(url: str):
 
         start_time = time.time()
         success = False
+        click_count = 0
+        last_click_time = 0
 
-        while time.time() - start_time < 20:  # 最多等待20秒
+        while time.time() - start_time < SOLVE_TIMEOUT:
             title = page.title.lower()
 
-            # 1. 尝试点击验证 (如果存在)
+            # 1. 尝试点击验证 (支持多次验证)
             try:
                 box = page.ele("@name=cf-turnstile-response", timeout=1)
                 if box:
                     wrapper = box.parent()
                     iframe = wrapper.shadow_root.ele("tag:iframe")
                     cb = iframe.ele("tag:body").shadow_root.ele("tag:input")
-                    if cb:
-                        log.info("👆 发现验证码，点击中...")
+                    # 避免频繁点击，至少间隔2秒
+                    if cb and (time.time() - last_click_time) > 2:
+                        click_count += 1
+                        log.info(f"👆 发现验证码，第 {click_count} 次点击...")
                         cb.click()
-            except:
-                pass
+                        last_click_time = time.time()
+            except Exception as e:
+                # 只记录非预期的异常
+                if "timeout" not in str(e).lower() and "not found" not in str(e).lower():
+                    log.debug(f"[solver] 验证码检测异常: {e}")
 
-            # 2. 判断成功条件
+            # 2. 判断成功条件：标题正常且没有验证码
             if "just a moment" not in title and "cloudflare" not in title:
-                log.success(f"✅ 过盾成功，当前标题: {title}")
+                # 额外检查：确保没有验证码元素
+                try:
+                    still_has_turnstile = page.ele("@name=cf-turnstile-response", timeout=0.5)
+                    if still_has_turnstile:
+                        log.debug("[solver] 标题已变但验证码仍存在，继续等待...")
+                        time.sleep(1)
+                        continue
+                except Exception:
+                    pass  # 没有验证码元素，说明真的过盾了
+
+                log.success(f"✅ 过盾成功，当前标题: {title} (点击次数: {click_count})")
                 # 等待 cf_clearance Cookie 设置完成
                 time.sleep(2)
                 success = True
@@ -50,8 +71,8 @@ def solve_turnstile(url: str):
             time.sleep(1)
 
         if not success:
-            log.error("❌ 验证超时")
-            raise Exception("Cloudflare Bypass Timeout")
+            log.error(f"❌ 验证超时 ({SOLVE_TIMEOUT}秒)，点击次数: {click_count}")
+            raise Exception(f"Cloudflare Bypass Timeout after {click_count} clicks")
 
         # 3. 提取凭证
         raw_cookies = page.cookies()

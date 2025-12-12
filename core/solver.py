@@ -42,6 +42,8 @@ def solve_turnstile(url: str):
             # 2. 判断成功条件
             if "just a moment" not in title and "cloudflare" not in title:
                 log.success(f"✅ 过盾成功，当前标题: {title}")
+                # 等待 cf_clearance Cookie 设置完成
+                time.sleep(2)
                 success = True
                 break
 
@@ -77,6 +79,10 @@ def solve_turnstile(url: str):
         log.info(f"[solver] raw_cookies 类型: {type(raw_cookies)}")
         log.info(f"[solver] 提取后的 cookie_dict: {cookie_dict}")
         log.info(f"[solver] 提取到的 UA: {ua}")
+
+        # 检查是否有 cf_clearance（Cloudflare 验证通过的关键 Cookie）
+        if "cf_clearance" not in cookie_dict:
+            log.warning("[solver] ⚠️ 未检测到 cf_clearance Cookie，可能过盾不完整")
 
         return {
             "cookies": cookie_dict,

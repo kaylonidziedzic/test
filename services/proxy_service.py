@@ -110,6 +110,7 @@ def proxy_request(
     data: Optional[Dict[str, Any]] = None,
     json: Optional[Dict[str, Any]] = None,
     fetcher: Optional[str] = None,
+    data_encoding: Optional[str] = None,
 ) -> Union[FetchResponse, Any]:
     """代理请求核心接口
 
@@ -121,6 +122,7 @@ def proxy_request(
         json: JSON 数据
         fetcher: 指定使用的 Fetcher ("cookie" 或 "browser")，
                  默认根据域名规则自动选择
+        data_encoding: POST data 编码，如 "gbk"、"gb2312"，默认自动检测
 
     Returns:
         FetchResponse: 响应对象
@@ -130,6 +132,13 @@ def proxy_request(
     # 解析域名
     from urllib.parse import urlparse
     hostname = urlparse(url).hostname or ""
+
+    # 自动检测编码（如果未指定）
+    if data_encoding is None and data and method.upper() in ["POST", "PUT", "PATCH"]:
+        from config import get_encoding_for_domain
+        data_encoding = get_encoding_for_domain(hostname)
+        if data_encoding:
+            log.info(f"[ProxyService] 自动检测编码: {hostname} -> {data_encoding}")
 
     # 选择 Fetcher
     if fetcher:
@@ -152,6 +161,7 @@ def proxy_request(
         headers=headers,
         data=data,
         json=json,
+        data_encoding=data_encoding,
     )
 
     return response

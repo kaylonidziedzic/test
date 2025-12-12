@@ -27,6 +27,7 @@ def proxy_handler(req: ProxyRequest) -> JSONResponse:
             headers=req.headers,
             data=req.data,
             json=req.json_body,
+            data_encoding=req.data_encoding,
         )
 
         # 兼容 FetchResponse 和原始 Response 对象

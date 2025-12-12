@@ -65,6 +65,7 @@ class CookieFetcher(BaseFetcher):
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
         json: Optional[Dict[str, Any]] = None,
+        data_encoding: Optional[str] = None,
         **kwargs
     ) -> FetchResponse:
         """使用 Cookie 复用方式获取页面"""
@@ -77,7 +78,7 @@ class CookieFetcher(BaseFetcher):
             creds = credential_cache.get_credentials(url, force_refresh=force_refresh)
 
             # 2. 构造安全的请求头
-            safe_headers = self._build_safe_headers(headers, creds["ua"])
+            safe_headers = self._build_safe_headers(headers, creds["ua"], url, method)
 
             # 3. 发起请求
             log.info(f"[{self.name}] 发起请求: {url} (尝试 {attempt + 1}/{self.retries + 1})")
@@ -90,6 +91,7 @@ class CookieFetcher(BaseFetcher):
                     cookies=creds["cookies"],
                     data=data,
                     json=json,
+                    data_encoding=data_encoding,
                 )
 
                 # 4. 检查是否被拦截
@@ -111,7 +113,7 @@ class CookieFetcher(BaseFetcher):
         raise Exception("Unexpected error in CookieFetcher")
 
     def _build_safe_headers(
-        self, headers: Dict[str, str], ua: str
+        self, headers: Dict[str, str], ua: str, url: str, method: str
     ) -> Dict[str, str]:
         """构造安全的请求头，过滤可能冲突的字段"""
         blocked_headers = {
@@ -123,6 +125,25 @@ class CookieFetcher(BaseFetcher):
         }
         safe = {k: v for k, v in headers.items() if k.lower() not in blocked_headers}
         safe["User-Agent"] = ua
+
+        # 对于 POST/PUT/PATCH 等修改性请求，添加必要的浏览器请求头
+        if method.upper() in ["POST", "PUT", "PATCH", "DELETE"]:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+
+            # 添加 Referer（通常是同域名的首页或当前URL）
+            if "referer" not in {k.lower() for k in safe.keys()}:
+                safe["Referer"] = url
+
+            # 添加 Origin
+            if "origin" not in {k.lower() for k in safe.keys()}:
+                safe["Origin"] = origin
+
+            # 添加 Accept
+            if "accept" not in {k.lower() for k in safe.keys()}:
+                safe["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+
         return safe
 
     def _do_request(
@@ -133,14 +154,24 @@ class CookieFetcher(BaseFetcher):
         cookies: Dict[str, str],
         data: Optional[Dict[str, Any]],
         json: Optional[Dict[str, Any]],
+        data_encoding: Optional[str] = None,
     ) -> FetchResponse:
         """执行实际的 HTTP 请求"""
+        # 处理 data 编码（如 GBK）
+        request_data = data
+        if data and data_encoding:
+            from urllib.parse import urlencode
+            # 将 dict 转为 URL 编码字符串，使用指定编码
+            encoded_str = urlencode(data, encoding=data_encoding)
+            request_data = encoded_str
+            log.info(f"[{self.name}] 使用 {data_encoding} 编码 POST 数据")
+
         request_kwargs = {
             "method": method,
             "url": url,
             "headers": headers,
             "cookies": cookies,
-            "data": data,
+            "data": request_data,
             "json": json,
             "timeout": self.timeout,
             "allow_redirects": True,

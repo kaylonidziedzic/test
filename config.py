@@ -36,3 +36,31 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings = Settings()
+
+# 域名编码映射表：用于自动编码 POST 请求数据
+# 格式: "域名关键词": "编码"
+DOMAIN_ENCODING_MAP = {
+    "69shuba": "gbk",
+    "69shu": "gbk",
+    # 其他 GBK 编码的小说站
+    "biquge": "gbk",
+    "xbiquge": "gbk",
+    "biquwu": "gbk",
+    "23us": "gbk",
+    "23wx": "gbk",
+    "xxbiquge": "gbk",
+    "shuquge": "gbk",
+    "qu.la": "gbk",
+    "qula": "gbk",
+    "biqiuge": "gbk",
+    "ibiquge": "gbk",
+}
+
+
+def get_encoding_for_domain(hostname: str) -> str:
+    """根据域名获取编码，默认返回 None（使用 UTF-8）"""
+    hostname_lower = hostname.lower()
+    for domain_key, encoding in DOMAIN_ENCODING_MAP.items():
+        if domain_key in hostname_lower:
+            return encoding
+    return None

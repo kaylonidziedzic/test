@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CF-Gateway 管理控制台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+        .loader { border: 2px solid rgba(59,130,246,0.2); border-left-color: #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        [v-cloak] { display: none !important; }
+        .log-line { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #3f3f46; }
+        .log-line.log-info { color: #3b82f6; }
+        .log-line.log-warning { color: #f59e0b; }
+        .log-line.log-error { color: #ef4444; }
+        .log-line.log-success { color: #10b981; }
+    </style>
+</head>
+<body class="antialiased h-screen overflow-hidden bg-zinc-50">
+
+    <div id="init-loader" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
+        <div class="loader mb-4" style="width: 32px; height: 32px;"></div>
+        <div class="text-zinc-500 text-sm">系统初始化中...</div>
+    </div>
+
+    <div id="app" v-cloak class="h-full flex">
+
+        <!-- Login -->
+        <div v-if="!authenticated" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+            <div class="w-full max-w-sm bg-white border border-zinc-200 rounded-xl p-8 shadow-2xl">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <i class="ri-shield-keyhole-fill text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-zinc-900">CF-Gateway</h1>
+                        <p class="text-xs text-zinc-500">企业级管理控制台</p>
+                    </div>
+                </div>
+                <form @submit.prevent="login" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-700 mb-2">访问密钥</label>
+                        <input type="password" v-model="apiKey"
+                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none placeholder-zinc-400"
+                            placeholder="请输入 API 密钥..." autofocus>
+                    </div>
+                    <button type="submit" :disabled="loading || !apiKey"
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-lg py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg">
+                        <span v-if="loading" class="loader w-4 h-4"></span>
+                        <i v-else class="ri-login-circle-line text-lg"></i>
+                        <span>{{ loading ? '登录中...' : '登录' }}</span>
+                    </button>
+                </form>
+                <p v-if="loginError" class="mt-4 text-center text-red-500 text-xs">
+                    <i class="ri-error-warning-line mr-1"></i>{{ loginError }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <template v-else>
+
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white border-r border-zinc-200 flex flex-col hidden lg:flex">
+                <div class="h-16 flex items-center justify-between px-6 border-b border-zinc-200">
+                    <div class="flex items-center gap-2 text-zinc-900 font-semibold">
+                        <i class="ri-cloud-windy-line text-blue-500 text-xl"></i>
+                        <span>CF-Gateway</span>
+                    </div>
+                </div>
+
+                <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                    <div v-for="tab in tabs" :key="tab.id" @click="switchTab(tab.id)"
+                        :class="['flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all',
+                            activeTab === tab.id ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900']">
+                        <i :class="[tab.icon, 'text-lg', activeTab === tab.id ? 'text-blue-500' : '']"></i>
+                        {{ tab.name }}
+                    </div>
+                </nav>
+
+                <div class="p-4 border-t border-zinc-200 bg-zinc-50">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span class="text-xs text-zinc-600 font-mono">{{ status.uptime_human || '在线' }}</span>
+                        </div>
+                    </div>
+                    <button @click="logout" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                        <i class="ri-logout-box-r-line"></i> 退出登录
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Mobile Nav -->
+            <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40">
+                <div class="flex items-center justify-around px-2">
+                    <button v-for="tab in tabs.slice(0, 5)" :key="tab.id" @click="switchTab(tab.id)"
+                        :class="['flex flex-col items-center py-2 px-3 text-xs font-medium relative',
+                            activeTab === tab.id ? 'text-blue-600' : 'text-zinc-500']">
+                        <i :class="[tab.icon, 'text-xl mb-0.5']"></i>
+                        <span class="text-[10px]">{{ tab.name }}</span>
+                        <span v-if="activeTab === tab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main -->
+            <div class="flex-1 flex flex-col bg-zinc-50 overflow-hidden">
+                <header class="h-16 border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8 bg-white/80 backdrop-blur-md">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">{{ currentTabName }}</h2>
+                        <p class="text-xs text-zinc-500 hidden sm:block">{{ currentTabDesc }}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="hidden md:flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-lg px-3 py-1.5">
+                            <i class="ri-search-line text-zinc-400 text-sm"></i>
+                            <input v-model="searchQuery" type="text" placeholder="搜索..."
+                                class="bg-transparent text-xs text-zinc-900 placeholder-zinc-500 outline-none w-32">
+                        </div>
+                        <span class="hidden sm:inline text-xs text-zinc-500 font-mono">v{{ status.version || '4.3.0' }}</span>
+                        <button @click="loadData" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                            <i class="ri-refresh-line text-sm"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <main class="flex-1 overflow-y-auto p-4 lg:p-8 pb-20 lg:pb-8">
+                    <div class="max-w-7xl mx-auto space-y-6">
+
+                        <!-- MONITOR -->
+                        <div v-if="activeTab === 'monitor'" class="space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="text-xs font-semibold text-zinc-500 uppercase">总请求数</div>
+                                        <div class="p-2 bg-blue-50 rounded-lg"><i class="ri-bar-chart-box-line text-blue-600"></i></div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-zinc-900">{{ (stats.requests?.total || 0).toLocaleString() }}</div>
+                                </div>
+                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="text-xs font-semibold text-zinc-500 uppercase">成功率</div>
+                                        <div class="p-2 bg-green-50 rounded-lg"><i class="ri-checkbox-circle-line text-green-600"></i></div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-green-600">{{ stats.requests?.success_rate || 0 }}%</div>
+                                </div>
+                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="text-xs font-semibold text-zinc-500 uppercase">浏览器池</div>
+                                        <div class="p-2 bg-purple-50 rounded-lg"><i class="ri-cpu-line text-purple-600"></i></div>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <div class="text-3xl font-bold text-zinc-900">{{ stats.browser_pool?.available || 0 }}</div>
+                                        <div class="text-lg text-zinc-500">/ {{ stats.browser_pool?.total || 0 }}</div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="text-xs font-semibold text-zinc-500 uppercase">平均延迟</div>
+                                        <div class="p-2 bg-orange-50 rounded-lg"><i class="ri-timer-line text-orange-600"></i></div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-zinc-900">{{ stats.requests?.avg_time_ms || 0 }}<span class="text-lg font-normal text-zinc-500 ml-1">ms</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Charts -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
+                                    <div class="flex items-center justify-between mb-6">
+                                        <div>
+                                            <h3 class="text-sm font-semibold text-zinc-900">成功率趋势</h3>
+                                            <p class="text-xs text-zinc-500 mt-1">最近 60 个数据点</p>
+                                        </div>
+                                        <span class="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium border border-blue-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> 实时
+                                        </span>
+                                    </div>
+                                    <div class="h-64"><line-chart :data="timeSeries"></line-chart></div>
+                                </div>
+
+                                <div class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
+                                    <div class="mb-6">
+                                        <h3 class="text-sm font-semibold text-zinc-900">请求分布</h3>
+                                        <p class="text-xs text-zinc-500 mt-1">按状态码分类</p>
+                                    </div>
+                                    <div class="h-64 flex items-center justify-center">
+                                        <donut-chart :data="requestDistribution"></donut-chart>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Table -->
+                            <div class="border border-zinc-200 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all">
+                                <div class="bg-zinc-50 px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
+                                    <h3 class="text-sm font-semibold text-zinc-900">最近活动</h3>
+                                    <button @click="exportRequests" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 transition-all">
+                                        <i class="ri-download-line"></i> 导出
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left">状态</th>
+                                                <th class="px-6 py-3 text-left">URL</th>
+                                                <th class="px-6 py-3 text-right">延迟</th>
+                                                <th class="px-6 py-3 text-right">时间</th>
+                                                <th class="px-6 py-3 text-center">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-zinc-200 text-zinc-700">
+                                            <tr v-for="req in filteredRequests" :key="req.id" class="hover:bg-zinc-50 transition-all">
+                                                <td class="px-6 py-4">
+                                                    <span :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
+                                                        req.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                                                        <i :class="req.success ? 'ri-checkbox-circle-fill mr-1' : 'ri-close-circle-fill mr-1'"></i>
+                                                        {{ req.success ? '成功' : '失败' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate">{{ req.url }}</td>
+                                                <td class="px-6 py-4 text-right font-mono text-zinc-600">{{ req.duration_ms }}ms</td>
+                                                <td class="px-6 py-4 text-right text-zinc-600">{{ req.timestamp?.split(' ')[1] }}</td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <button @click="showRequestDetail(req)" class="text-zinc-500 hover:text-blue-600 transition-all">
+                                                        <i class="ri-eye-line text-lg"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="filteredRequests.length === 0">
+                                                <td colspan="5" class="px-6 py-16 text-center">
+                                                    <i class="ri-inbox-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                    <p class="text-zinc-500 text-sm">暂无请求记录</p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LOGS -->
+                        <div v-if="activeTab === 'logs'" class="space-y-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                                <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900">系统日志</h3>
+                                        <p class="text-xs text-zinc-500 mt-0.5">
+                                            <i class="ri-pulse-line mr-1"></i>实时服务器日志（每3秒自动刷新）
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <select v-model="logFilter" class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                            <option value="all">所有级别</option>
+                                            <option value="info">信息</option>
+                                            <option value="warning">警告</option>
+                                            <option value="error">错误</option>
+                                            <option value="success">成功</option>
+                                        </select>
+                                        <button @click="clearLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                            <i class="ri-delete-bin-line"></i> 清空
+                                        </button>
+                                        <button @click="exportLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                            <i class="ri-download-line"></i> 导出
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="h-[600px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
+                                    <div v-for="(log, i) in filteredLogs" :key="i" :class="['log-line', `log-${log.level}`]">
+                                        <span class="text-zinc-500">[{{ log.timestamp }}]</span>
+                                        <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
+                                        <span class="ml-2">{{ log.message }}</span>
+                                    </div>
+                                    <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- POOL -->
+                        <div v-if="activeTab === 'pool'" class="space-y-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                                <div class="px-6 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900">浏览器实例</h3>
+                                        <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{ browserPoolInfo.available || 0 }} 可用</p>
+                                    </div>
+                                    <button @click="restartBrowserPool" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <i class="ri-restart-line"></i> 重启池
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left">实例 ID</th>
+                                                <th class="px-6 py-3 text-left">进程 ID</th>
+                                                <th class="px-6 py-3 text-left">状态</th>
+                                                <th class="px-6 py-3 text-left">使用次数</th>
+                                                <th class="px-6 py-3 text-left">创建时间</th>
+                                                <th class="px-6 py-3 text-left">最后使用</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-zinc-200 text-zinc-700">
+                                            <tr v-for="inst in browserPoolInfo.instances" :key="inst.id" class="hover:bg-zinc-50 transition-all">
+                                                <td class="px-6 py-4 font-mono text-zinc-600">#{{ inst.id }}</td>
+                                                <td class="px-6 py-4 font-mono">{{ inst.pid }}</td>
+                                                <td class="px-6 py-4">
+                                                    <span :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
+                                                        inst.in_use ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700']">
+                                                        <span :class="['w-1.5 h-1.5 rounded-full mr-1.5', inst.in_use ? 'bg-yellow-500' : 'bg-blue-500']"></span>
+                                                        {{ inst.in_use ? '使用中' : '空闲' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4">{{ inst.use_count }}</td>
+                                                <td class="px-6 py-4 text-zinc-600">{{ inst.created_at }}</td>
+                                                <td class="px-6 py-4 text-zinc-600">{{ inst.last_used }}</td>
+                                            </tr>
+                                            <tr v-if="!browserPoolInfo.instances?.length">
+                                                <td colspan="6" class="px-6 py-16 text-center">
+                                                    <i class="ri-cpu-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                    <p class="text-zinc-500 text-sm">暂无浏览器实例运行</p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CACHE -->
+                        <div v-if="activeTab === 'cache'" class="space-y-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <div class="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h3 class="text-base font-semibold text-zinc-900">缓存统计</h3>
+                                        <p class="text-sm text-zinc-500 mt-1">凭证缓存性能指标</p>
+                                    </div>
+                                    <button @click="clearAllCache" class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                                        <i class="ri-delete-bin-line"></i> 清空全部缓存
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="text-xs font-semibold text-blue-700">总条目</div>
+                                            <i class="ri-database-2-line text-blue-600 text-xl"></i>
+                                        </div>
+                                        <div class="text-3xl font-bold text-blue-900">{{ stats.cache?.total || 0 }}</div>
+                                    </div>
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="text-xs font-semibold text-green-700">命中率</div>
+                                            <i class="ri-speed-up-line text-green-600 text-xl"></i>
+                                        </div>
+                                        <div class="text-3xl font-bold text-green-900">{{ stats.cache?.hit_rate || 0 }}%</div>
+                                    </div>
+                                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="text-xs font-semibold text-purple-700">存储大小</div>
+                                            <i class="ri-hard-drive-2-line text-purple-600 text-xl"></i>
+                                        </div>
+                                        <div class="text-3xl font-bold text-purple-900">{{ formatBytes(stats.cache?.size_bytes || 0) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CONFIG -->
+                        <div v-if="activeTab === 'config'" class="space-y-6 max-w-4xl">
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-4">配置预设</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <button @click="applyPreset('development')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <i class="ri-code-s-slash-line text-2xl text-blue-600"></i>
+                                            <div class="text-sm font-semibold text-zinc-900">开发环境</div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500">最小池，快速回收</p>
+                                    </button>
+                                    <button @click="applyPreset('production')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <i class="ri-rocket-line text-2xl text-green-600"></i>
+                                            <div class="text-sm font-semibold text-zinc-900">生产环境</div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500">高流量优化</p>
+                                    </button>
+                                    <button @click="applyPreset('conservative')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <i class="ri-shield-check-line text-2xl text-purple-600"></i>
+                                            <div class="text-sm font-semibold text-zinc-900">保守模式</div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500">低资源占用</p>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
+                                    <h3 class="text-base font-semibold text-zinc-900">实例池设置</h3>
+                                    <p class="text-sm text-zinc-500 mt-1">配置浏览器资源分配</p>
+                                </div>
+                                <div class="p-6 grid gap-6">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-zinc-700 mb-2">最小实例数</label>
+                                            <input type="number" v-model.number="config.browser_pool_min"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <p class="text-xs text-zinc-500 mt-2">保持预热的基准浏览器数量</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-zinc-700 mb-2">最大实例数</label>
+                                            <input type="number" v-model.number="config.browser_pool_max"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <p class="text-xs text-zinc-500 mt-2">自动扩展的硬性限制</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">空闲超时 (秒)</label>
+                                        <input type="number" v-model.number="config.browser_pool_idle_timeout"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <p class="text-xs text-zinc-500 mt-2">空闲浏览器被回收前的等待时间</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">内存硬限制 (MB)</label>
+                                        <input type="number" v-model.number="config.memory_limit_mb"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <p class="text-xs text-zinc-500 mt-2">超过此值容器将重启</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
+                                    <h3 class="text-base font-semibold text-zinc-900">过盾策略</h3>
+                                    <p class="text-sm text-zinc-500 mt-1">微调检测规避参数</p>
+                                </div>
+                                <div class="p-6 grid gap-6">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">Token 有效期 (秒)</label>
+                                        <input type="number" v-model.number="config.cookie_expire_seconds"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <p class="text-xs text-zinc-500 mt-2">Cloudflare token 被视为有效的时长</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">指纹随机化</label>
+                                        <select v-model="config.fingerprint_enabled"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option :value="true">启用（推荐）</option>
+                                            <option :value="false">禁用</option>
+                                        </select>
+                                        <p class="text-xs text-zinc-500 mt-2">为每个实例随机化 Canvas/WebGL/Audio 指纹</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-4">
+                                <button @click="exportConfig" class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
+                                    <i class="ri-download-line"></i> 导出 JSON
+                                </button>
+                                <button @click="saveConfig" :disabled="saving"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
+                                    <span v-if="saving" class="flex items-center gap-2">
+                                        <span class="loader w-4 h-4"></span> 保存中...
+                                    </span>
+                                    <span v-else class="flex items-center gap-2">
+                                        <i class="ri-save-line"></i> 保存配置
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ACTIONS -->
+                        <div v-if="activeTab === 'actions'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <i class="ri-test-tube-line text-purple-600 text-lg"></i> URL 验证
+                                </h3>
+                                <div class="flex gap-2 mb-4">
+                                    <input v-model="testUrl"
+                                        class="flex-1 bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none placeholder-zinc-400"
+                                        placeholder="https://example.com" />
+                                    <button @click="testBypass" :disabled="testing || !testUrl"
+                                        class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                        <i v-if="!testing" class="ri-play-line"></i>
+                                        <span>{{ testing ? '测试中...' : '检查' }}</span>
+                                    </button>
+                                </div>
+                                <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span :class="['font-bold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
+                                            <i :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
+                                            {{ testResult.success ? '通过' : '失败' }}
+                                        </span>
+                                        <span class="font-mono text-zinc-600 text-xs">{{ testResult.duration_ms }}ms</span>
+                                    </div>
+
+                                    <div v-if="testResult.error" class="text-xs text-red-600 break-all p-2 bg-red-50 rounded border border-red-200">
+                                        <div class="font-semibold mb-1">错误信息：</div>
+                                        {{ testResult.error }}
+                                    </div>
+
+                                    <div v-if="testResult.success" class="space-y-2">
+                                        <div class="text-xs">
+                                            <span class="font-semibold text-zinc-700">User Agent:</span>
+                                            <div class="mt-1 p-2 bg-white border border-zinc-200 rounded text-zinc-600 break-all">
+                                                {{ testResult.ua || 'N/A' }}
+                                            </div>
+                                        </div>
+                                        <div class="text-xs">
+                                            <span class="font-semibold text-zinc-700">Cookies ({{ testResult.cookies_count || 0 }}):</span>
+                                            <div class="mt-1 p-3 bg-white border border-zinc-200 rounded max-h-64 overflow-y-auto space-y-2">
+                                                <div v-for="(value, name) in testResult.cookies" :key="name" class="p-2 bg-zinc-50 border border-zinc-200 rounded">
+                                                    <div class="font-mono text-xs font-semibold text-blue-600 mb-1">{{ name }}</div>
+                                                    <div class="font-mono text-[11px] text-zinc-700 break-all">{{ value }}</div>
+                                                </div>
+                                                <div v-if="!testResult.cookies || Object.keys(testResult.cookies).length === 0" class="text-zinc-500 text-center py-4">无 cookies</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <i class="ri-file-list-3-line text-blue-600 text-lg"></i> 批量验证
+                                </h3>
+                                <textarea v-model="batchTestUrls"
+                                    class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none mb-4 h-36 resize-none font-mono placeholder-zinc-400"
+                                    placeholder="每行一个 URL...&#10;https://example1.com&#10;https://example2.com"></textarea>
+                                <div class="flex justify-between items-center">
+                                    <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
+                                        <i class="ri-checkbox-circle-fill text-green-500"></i>
+                                        {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
+                                    </span>
+                                    <button @click="batchTestBypass" :disabled="batchTesting"
+                                        class="ml-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                        <i v-if="!batchTesting" class="ri-play-list-line"></i>
+                                        <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-5 flex items-center gap-2">
+                                    <i class="ri-server-line text-zinc-600"></i> 系统资源
+                                </h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-zinc-700">CPU 使用率</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.cpu?.percent || 0 }}%</span>
+                                        </div>
+                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
+                                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.cpu?.percent || 0) + '%'}"></div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.cpu?.cores || 0 }} 核心可用</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-zinc-700">内存使用率</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.memory?.percent || 0 }}%</span>
+                                        </div>
+                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
+                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.memory?.percent || 0) + '%'}"></div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.memory?.used_gb || 0 }} / {{ systemInfo.memory?.total_gb || 0 }} GB</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-zinc-700">磁盘使用率</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.disk?.percent || 0 }}%</span>
+                                        </div>
+                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
+                                            <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.disk?.percent || 0) + '%'}"></div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.disk?.used_gb || 0 }} / {{ systemInfo.disk?.total_gb || 0 }} GB</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            </div>
+        </template>
+
+        <!-- Detail Modal -->
+        <div v-if="selectedRequest" @click="selectedRequest = null" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div @click.stop class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-zinc-900">请求详情</h3>
+                    <button @click="selectedRequest = null" class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-5">
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-600 uppercase">状态</label>
+                        <div :class="['mt-2 inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold',
+                            selectedRequest.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                            <i :class="selectedRequest.success ? 'ri-checkbox-circle-fill mr-2' : 'ri-close-circle-fill mr-2'"></i>
+                            {{ selectedRequest.success ? '成功' : '失败' }}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-600 uppercase">URL</label>
+                        <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900 break-all">
+                            {{ selectedRequest.url }}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-semibold text-zinc-600 uppercase">耗时</label>
+                            <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                                {{ selectedRequest.duration_ms }}ms
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-zinc-600 uppercase">时间戳</label>
+                            <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                                {{ selectedRequest.timestamp }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="selectedRequest.error">
+                        <label class="text-xs font-semibold text-zinc-600 uppercase">错误信息</label>
+                        <div class="mt-2 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 break-all">
+                            {{ selectedRequest.error }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div v-if="toast.show" class="fixed bottom-6 right-6 z-50">
+            <div :class="['px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium border backdrop-blur-md',
+                toast.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+                toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
+                'bg-blue-50 text-blue-700 border-blue-200']">
+                <i :class="toast.type === 'success' ? 'ri-checkbox-circle-fill text-xl' : toast.type === 'error' ? 'ri-error-warning-fill text-xl' : 'ri-information-fill text-xl'"></i>
+                {{ toast.message }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted, onUnmounted, computed, watch } = Vue;
+
+        const LineChart = {
+            props: ['data'],
+            template: `
+                <svg viewBox="0 0 100 30" class="w-full h-full" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <path :d="fillPath" fill="url(#grad)" />
+                    <path :d="path" fill="none" stroke="#3b82f6" stroke-width="2" />
+                    <circle v-for="(p, i) in points" :key="i" :cx="p.x" :cy="p.y" r="2.5" fill="#3b82f6" opacity="0.8" />
+                </svg>
+            `,
+            setup(props) {
+                const points = computed(() => {
+                    const d = props.data || [];
+                    if (d.length < 2) return [];
+                    return d.map((item, i) => ({
+                        x: (i / (d.length - 1)) * 100,
+                        y: 30 - (item.success_rate / 100) * 25
+                    }));
+                });
+                const path = computed(() => points.value.length < 2 ? '' : points.value.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' '));
+                const fillPath = computed(() => path.value ? `${path.value} L 100 30 L 0 30 Z` : '');
+                return { path, fillPath, points };
+            }
+        };
+
+        const DonutChart = {
+            props: ['data'],
+            template: `
+                <div class="flex items-center gap-8">
+                    <svg viewBox="0 0 100 100" class="w-40 h-40">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#f4f4f5" stroke-width="20"/>
+                        <circle v-for="(seg, i) in segments" :key="i"
+                            cx="50" cy="50" r="40" fill="none"
+                            :stroke="seg.color" stroke-width="20"
+                            :stroke-dasharray="seg.dash"
+                            :stroke-dashoffset="seg.offset"
+                            transform="rotate(-90 50 50)"/>
+                        <text x="50" y="45" text-anchor="middle" font-size="18" font-weight="bold" fill="#18181b">{{ total }}</text>
+                        <text x="50" y="60" text-anchor="middle" font-size="9" fill="#71717a">总计</text>
+                    </svg>
+                    <div class="space-y-2">
+                        <div v-for="item in data" :key="item.label" class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full" :style="{backgroundColor: item.color}"></div>
+                            <div class="text-sm">
+                                <div class="font-medium text-zinc-900">{{ item.label }}</div>
+                                <div class="text-xs text-zinc-600">{{ item.value }} ({{ item.percentage }}%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            setup(props) {
+                const total = computed(() => props.data.reduce((sum, item) => sum + item.value, 0));
+                const circ = 2 * Math.PI * 40;
+                const segments = computed(() => {
+                    let off = 0;
+                    return props.data.map(item => {
+                        const pct = total.value > 0 ? item.value / total.value : 0;
+                        const len = circ * pct;
+                        const seg = { color: item.color, dash: `${len} ${circ}`, offset: -off };
+                        off += len;
+                        return seg;
+                    });
+                });
+                return { segments, total };
+            }
+        };
+
+        createApp({
+            setup() {
+                const authenticated = ref(false), apiKey = ref(''), loading = ref(false), loginError = ref('');
+                const activeTab = ref('monitor'), saving = ref(false), testing = ref(false);
+                const testUrl = ref(''), testResult = ref(null);
+                const batchTesting = ref(false), batchTestUrls = ref(''), batchTestResults = ref(null);
+                const selectedRequest = ref(null), searchQuery = ref(''), logFilter = ref('all');
+
+                const tabs = [
+                    { id: 'monitor', name: '总览', icon: 'ri-dashboard-3-line', desc: '实时监控和数据分析' },
+                    { id: 'logs', name: '日志', icon: 'ri-file-list-3-line', desc: '系统日志和活动' },
+                    { id: 'pool', name: '实例池', icon: 'ri-cpu-line', desc: '浏览器池管理' },
+                    { id: 'cache', name: '缓存', icon: 'ri-database-2-line', desc: '缓存统计' },
+                    { id: 'config', name: '配置', icon: 'ri-settings-4-line', desc: '系统配置' },
+                    { id: 'actions', name: '操作', icon: 'ri-flashlight-line', desc: '测试和操作工具' }
+                ];
+
+                const status = reactive({}), stats = reactive({}), config = reactive({}), timeSeries = reactive([]);
+                const requestHistory = reactive([]), systemInfo = reactive({}), browserPoolInfo = reactive({ instances: [] });
+                const toast = reactive({ show: false, message: '', type: 'success' }), logs = reactive([]);
+                let refreshInterval = null;
+
+                const requestDistribution = computed(() => {
+                    const t = stats.requests?.total || 0, s = stats.requests?.success || 0, f = stats.requests?.failed || 0;
+                    return [
+                        { label: '成功', value: s, percentage: t > 0 ? Math.round(s/t*100) : 0, color: '#10b981' },
+                        { label: '失败', value: f, percentage: t > 0 ? Math.round(f/t*100) : 0, color: '#ef4444' },
+                    ];
+                });
+
+                const filteredRequests = computed(() => {
+                    if (!searchQuery.value) return requestHistory;
+                    const q = searchQuery.value.toLowerCase();
+                    return requestHistory.filter(r => r.url.toLowerCase().includes(q) || r.timestamp.includes(q));
+                });
+
+                const filteredLogs = computed(() => logFilter.value === 'all' ? logs : logs.filter(l => l.level === logFilter.value));
+                const currentTabName = computed(() => tabs.find(t => t.id === activeTab.value)?.name);
+                const currentTabDesc = computed(() => tabs.find(t => t.id === activeTab.value)?.desc);
+
+                const showToast = (msg, type = 'success') => {
+                    toast.message = msg; toast.type = type; toast.show = true;
+                    setTimeout(() => toast.show = false, 3500);
+                };
+
+                const api = async (path, opts = {}) => {
+                    const res = await fetch(`/api/dashboard${path}`, {
+                        ...opts, headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    return res.json();
+                };
+
+                const loadData = async () => {
+                    if (!authenticated.value) return;
+                    try {
+                        const [s, st, c, ts, h, sys, bp, l] = await Promise.all([
+                            api('/status'), api('/stats'), api('/config'), api('/time-series'),
+                            api('/history'), api('/system'), api('/browser-pool'), api('/logs?limit=100')
+                        ]);
+                        Object.assign(status, s); Object.assign(stats, st); Object.assign(config, c);
+                        timeSeries.splice(0, timeSeries.length, ...ts);
+                        requestHistory.splice(0, requestHistory.length, ...h);
+                        Object.assign(systemInfo, sys); Object.assign(browserPoolInfo, bp);
+                        logs.splice(0, logs.length, ...l);
+                    } catch (e) {
+                        if (e.message.includes('401')) {
+                            authenticated.value = false;
+                            clearInterval(refreshInterval);
+                            showToast('会话已过期', 'error');
+                        }
+                    }
+                };
+
+                const login = async () => {
+                    loading.value = true; loginError.value = '';
+                    try {
+                        await api('/status');
+                        authenticated.value = true;
+                        localStorage.setItem('apiKey', apiKey.value);
+                        await loadData();
+                        refreshInterval = setInterval(loadData, 3000);
+                        showToast('欢迎回来！', 'success');
+                    } catch (e) { loginError.value = 'API 密钥无效'; }
+                    finally { loading.value = false; }
+                };
+
+                const logout = () => {
+                    authenticated.value = false; apiKey.value = '';
+                    localStorage.removeItem('apiKey');
+                    localStorage.removeItem('activeTab');
+                    clearInterval(refreshInterval);
+                    showToast('已退出登录', 'info');
+                };
+
+                const switchTab = (tabId) => {
+                    activeTab.value = tabId;
+                    localStorage.setItem('activeTab', tabId);
+                };
+
+                const saveConfig = async () => {
+                    saving.value = true;
+                    try {
+                        await api('/config', { method: 'PUT', body: JSON.stringify(config) });
+                        showToast('配置保存成功', 'success');
+                    } catch (e) { showToast(e.message, 'error'); }
+                    finally { saving.value = false; }
+                };
+
+                const clearAllCache = async () => {
+                    if(!confirm('确定要清空所有缓存吗？')) return;
+                    try {
+                        await api('/cache/clear', { method: 'POST' });
+                        showToast('缓存清空成功', 'success');
+                        loadData();
+                    } catch(e){ showToast(e.message,'error'); }
+                };
+
+                const restartBrowserPool = async () => {
+                    if(!confirm('确定要重启浏览器池吗？')) return;
+                    try {
+                        await api('/browser-pool/restart', { method: 'POST' });
+                        showToast('浏览器池重启中...', 'info');
+                        setTimeout(loadData, 2000);
+                    } catch(e){ showToast(e.message,'error'); }
+                };
+
+                const testBypass = async () => {
+                    testing.value = true; testResult.value = null;
+                    try {
+                        testResult.value = await api('/test', { method: 'POST', body: JSON.stringify({ url: testUrl.value }) });
+                        showToast(testResult.value.success ? '测试通过！' : '测试失败', testResult.value.success ? 'success' : 'error');
+                    } catch(e){
+                        testResult.value={success:false, error:e.message};
+                        showToast('测试失败', 'error');
+                    } finally { testing.value=false; }
+                };
+
+                const batchTestBypass = async () => {
+                    const urls = batchTestUrls.value.split('\n').filter(u=>u.trim());
+                    if(!urls.length) { showToast('请至少输入一个 URL', 'error'); return; }
+                    batchTesting.value=true;
+                    try {
+                        batchTestResults.value = await api('/test/batch', { method:'POST', body:JSON.stringify({urls}) });
+                        showToast(`批量测试完成: ${batchTestResults.value.success}/${batchTestResults.value.total} 通过`, 'success');
+                    } catch(e){ showToast(e.message,'error'); }
+                    finally { batchTesting.value=false; }
+                };
+
+                const exportConfig = () => {
+                    const a = document.createElement('a');
+                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config,null,2));
+                    a.download = "gateway-config.json"; a.click();
+                    showToast('配置已导出', 'success');
+                };
+
+                const exportRequests = () => {
+                    const csv = [['状态', 'URL', '延迟 (ms)', '时间戳'],
+                        ...requestHistory.map(r => [r.success ? '成功' : '失败', r.url, r.duration_ms, r.timestamp])
+                    ].map(row => row.join(',')).join('\n');
+                    const a = document.createElement('a');
+                    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+                    a.download = "requests-export.csv"; a.click();
+                    showToast('请求数据已导出', 'success');
+                };
+
+                const exportLogs = () => {
+                    const txt = filteredLogs.value.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
+                    const a = document.createElement('a');
+                    a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
+                    a.download = "system-logs.txt"; a.click();
+                    showToast('日志已导出', 'success');
+                };
+
+                const clearLogs = () => {
+                    if(!confirm('确定要清空所有日志吗？')) return;
+                    logs.splice(0, logs.length);
+                    showToast('日志已清空', 'success');
+                };
+
+                const applyPreset = (preset) => {
+                    const p = {
+                        development: { browser_pool_min: 1, browser_pool_max: 3, browser_pool_idle_timeout: 60, memory_limit_mb: 512, cookie_expire_seconds: 300, fingerprint_enabled: true },
+                        production: { browser_pool_min: 3, browser_pool_max: 10, browser_pool_idle_timeout: 300, memory_limit_mb: 2048, cookie_expire_seconds: 1800, fingerprint_enabled: true },
+                        conservative: { browser_pool_min: 1, browser_pool_max: 2, browser_pool_idle_timeout: 30, memory_limit_mb: 256, cookie_expire_seconds: 600, fingerprint_enabled: false }
+                    };
+                    Object.assign(config, p[preset]);
+                    const n = { development: '开发环境', production: '生产环境', conservative: '保守模式' };
+                    showToast(`${n[preset]}预设已应用`, 'success');
+                };
+
+                const formatBytes = (b) => {
+                    if (!b) return '0 B';
+                    const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(b) / Math.log(k));
+                    return Math.round(b / Math.pow(k, i) * 100) / 100 + ' ' + s[i];
+                };
+
+                // 监听 activeTab 变化，保存到 localStorage
+                watch(activeTab, (newTab) => {
+                    localStorage.setItem('activeTab', newTab);
+                });
+
+                onMounted(() => {
+                    document.getElementById('init-loader').style.display = 'none';
+
+                    // 恢复上次的标签页
+                    const savedTab = localStorage.getItem('activeTab');
+                    if (savedTab && tabs.find(t => t.id === savedTab)) {
+                        activeTab.value = savedTab;
+                    }
+
+                    const k = localStorage.getItem('apiKey');
+                    if (k) { apiKey.value = k; login(); }
+                });
+
+                onUnmounted(() => { if (refreshInterval) clearInterval(refreshInterval); });
+
+                return {
+                    authenticated, apiKey, loading, loginError, activeTab, tabs, currentTabName, currentTabDesc,
+                    status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo,
+                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults,
+                    selectedRequest, searchQuery, logs, logFilter, filteredLogs, requestDistribution, filteredRequests,
+                    login, logout, switchTab, loadData, showRequestDetail: (r) => selectedRequest.value = r,
+                    exportRequests, exportLogs, clearLogs, clearAllCache, restartBrowserPool,
+                    testBypass, batchTestBypass, exportConfig, applyPreset, saveConfig, formatBytes
+                };
+            }
+        }).component('line-chart', LineChart).component('donut-chart', DonutChart).mount('#app');
+    </script>
+</body>
+</html>

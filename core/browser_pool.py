@@ -204,8 +204,13 @@ class BrowserPool:
                     self._all_instances.remove(instance)
                     cleaned += 1
                     log.info(f"[BrowserPool] 回收空闲浏览器 PID: {instance.pid}")
-                except:
-                    pass
+                except Exception as e:
+                    log.warning(f"[BrowserPool] 回收浏览器失败 PID {instance.pid}: {e}")
+                    # 仍然从列表中移除，避免泄漏
+                    try:
+                        self._all_instances.remove(instance)
+                    except ValueError:
+                        pass
 
         return cleaned
 
@@ -217,8 +222,9 @@ class BrowserPool:
             for instance in self._all_instances:
                 try:
                     instance.page.quit()
-                except:
-                    pass
+                    log.debug(f"[BrowserPool] 已关闭浏览器 PID: {instance.pid}")
+                except Exception as e:
+                    log.warning(f"[BrowserPool] 关闭浏览器失败 PID {instance.pid}: {e}")
             self._all_instances.clear()
             self._initialized = False
 
@@ -233,6 +239,80 @@ class BrowserPool:
                 "min_size": self.min_size,
                 "max_size": self.max_size,
             }
+
+    def get_memory_usage_mb(self) -> float:
+        """获取所有浏览器进程的内存使用量 (MB)"""
+        import subprocess
+        total_kb = 0
+
+        with self._lock:
+            for instance in self._all_instances:
+                if not instance.pid:
+                    continue
+                try:
+                    # 获取主进程及其子进程的内存总和
+                    result = subprocess.run(
+                        ["ps", "-o", "rss=", "--ppid", str(instance.pid)],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    child_mem = sum(int(x) for x in result.stdout.split() if x.isdigit())
+
+                    # 加上主进程内存
+                    result = subprocess.run(
+                        ["ps", "-o", "rss=", "-p", str(instance.pid)],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    main_mem = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
+
+                    total_kb += child_mem + main_mem
+                except Exception:
+                    pass
+
+        return total_kb / 1024.0
+
+    def restart_high_memory_browsers(self, limit_mb: float) -> int:
+        """重启内存超限的浏览器
+
+        Args:
+            limit_mb: 内存限制 (MB)
+
+        Returns:
+            重启的数量
+        """
+        import subprocess
+        restarted = 0
+
+        with self._lock:
+            for instance in self._all_instances:
+                if instance.in_use or not instance.pid:
+                    continue
+
+                try:
+                    # 获取该浏览器的内存使用
+                    result = subprocess.run(
+                        ["ps", "-o", "rss=", "-p", str(instance.pid)],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    mem_kb = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
+                    mem_mb = mem_kb / 1024.0
+
+                    if mem_mb > limit_mb:
+                        log.warning(f"[BrowserPool] 浏览器 PID {instance.pid} 内存超限 ({mem_mb:.1f}MB > {limit_mb}MB)，重启中...")
+                        try:
+                            instance.page.quit()
+                        except Exception:
+                            pass
+
+                        # 创建新实例替换
+                        new_instance = self._create_browser()
+                        idx = self._all_instances.index(instance)
+                        self._all_instances[idx] = new_instance
+                        self._pool.put(new_instance)
+                        restarted += 1
+                except Exception as e:
+                    log.debug(f"[BrowserPool] 检查内存失败: {e}")
+
+        return restarted
 
 
 # 全局浏览器池

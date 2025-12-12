@@ -9,3 +9,4 @@ tenacity     # 优雅的重试机制
 python-dotenv
 pydantic-settings
 curl_cffi>=0.5.10
+psutil           # 系统监控

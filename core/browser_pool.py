@@ -178,6 +178,38 @@ class BrowserPool:
         self._pool.put(instance)
         log.debug(f"[BrowserPool] 归还浏览器 PID: {instance.pid}")
 
+    def destroy(self, instance: BrowserInstance):
+        """销毁损坏的浏览器实例并创建新实例补充池
+
+        Args:
+            instance: 要销毁的浏览器实例
+        """
+        pid = instance.pid
+        log.warning(f"[BrowserPool] 销毁损坏浏览器 PID: {pid}")
+
+        # 1. 尝试关闭浏览器进程
+        try:
+            instance.page.quit()
+        except Exception as e:
+            log.debug(f"[BrowserPool] 关闭浏览器失败 (可能已崩溃): {e}")
+
+        # 2. 从实例列表中移除
+        with self._lock:
+            try:
+                self._all_instances.remove(instance)
+            except ValueError:
+                pass  # 已经不在列表中
+
+            # 3. 如果低于最小数量，创建新实例补充
+            if len(self._all_instances) < self.min_size:
+                try:
+                    new_instance = self._create_browser()
+                    self._all_instances.append(new_instance)
+                    self._pool.put(new_instance)
+                    log.info(f"[BrowserPool] 已创建新实例补充池, 新 PID: {new_instance.pid}")
+                except Exception as e:
+                    log.error(f"[BrowserPool] 创建补充实例失败: {e}")
+
     def cleanup_idle(self) -> int:
         """清理空闲超时的浏览器
 

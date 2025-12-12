@@ -111,9 +111,21 @@ def solve_turnstile(url: str):
         }
 
     except Exception as e:
-        log.error(f"💥 过盾过程异常: {e}")
-        raise e
+        import traceback
+        error_msg = str(e) if str(e) else type(e).__name__
+        log.error(f"💥 过盾过程异常: {error_msg}")
+        log.error(f"💥 异常堆栈:\n{traceback.format_exc()}")
+        # 标记浏览器实例为损坏，需要销毁而非归还
+        instance._is_broken = True
+        raise
 
     finally:
-        # 无论成功失败，都归还浏览器到池中
-        browser_pool.release(instance)
+        # 检查浏览器是否损坏
+        is_broken = getattr(instance, '_is_broken', False)
+        if is_broken:
+            # 损坏的实例需要销毁并从池中移除
+            log.warning(f"[solver] 浏览器实例已损坏，销毁 PID: {instance.pid}")
+            browser_pool.destroy(instance)
+        else:
+            # 正常归还到池中
+            browser_pool.release(instance)

@@ -34,13 +34,13 @@ def solve_turnstile(url: str):
 
             # 1. 尝试点击验证 (支持多次验证)
             try:
-                box = page.ele("@name=cf-turnstile-response", timeout=1)
+                box = page.ele("@name=cf-turnstile-response", timeout=0.5)
                 if box:
                     wrapper = box.parent()
                     iframe = wrapper.shadow_root.ele("tag:iframe")
                     cb = iframe.ele("tag:body").shadow_root.ele("tag:input")
-                    # 避免频繁点击，至少间隔2秒
-                    if cb and (time.time() - last_click_time) > 2:
+                    # 避免频繁点击，至少间隔1.5秒
+                    if cb and (time.time() - last_click_time) > 1.5:
                         click_count += 1
                         log.info(f"👆 发现验证码，第 {click_count} 次点击...")
                         cb.click()
@@ -54,21 +54,21 @@ def solve_turnstile(url: str):
             if "just a moment" not in title and "cloudflare" not in title:
                 # 额外检查：确保没有验证码元素
                 try:
-                    still_has_turnstile = page.ele("@name=cf-turnstile-response", timeout=0.5)
+                    still_has_turnstile = page.ele("@name=cf-turnstile-response", timeout=0.3)
                     if still_has_turnstile:
                         log.debug("[solver] 标题已变但验证码仍存在，继续等待...")
-                        time.sleep(1)
+                        time.sleep(0.5)
                         continue
                 except Exception:
                     pass  # 没有验证码元素，说明真的过盾了
 
                 log.success(f"✅ 过盾成功，当前标题: {title} (点击次数: {click_count})")
                 # 等待 cf_clearance Cookie 设置完成
-                time.sleep(2)
+                time.sleep(1)
                 success = True
                 break
 
-            time.sleep(1)
+            time.sleep(0.5)
 
         if not success:
             log.error(f"❌ 验证超时 ({SOLVE_TIMEOUT}秒)，点击次数: {click_count}")

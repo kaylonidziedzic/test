@@ -16,7 +16,7 @@ from queue import Queue, Empty
 
 from DrissionPage import ChromiumOptions, ChromiumPage
 from config import settings
-from utils.fingerprint import get_fingerprint_script, get_webrtc_disable_script
+from utils.fingerprint import get_fingerprint_script, get_webrtc_disable_script, get_stealth_script
 from utils.logger import log
 
 # Linux下启动虚拟显示器
@@ -89,6 +89,13 @@ class BrowserPool:
 
         co.headless(settings.HEADLESS)
         page = ChromiumPage(co)
+
+        # 注入反检测脚本（必须最先注入）
+        try:
+            page.add_init_js(get_stealth_script())
+            log.debug("[BrowserPool] Stealth 脚本已注入")
+        except Exception as e:
+            log.warning(f"[BrowserPool] Stealth 脚本注入失败: {e}")
 
         # 注入指纹脚本
         if settings.FINGERPRINT_ENABLED:

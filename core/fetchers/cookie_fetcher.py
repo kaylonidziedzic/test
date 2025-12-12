@@ -219,15 +219,17 @@ class CookieFetcher(BaseFetcher):
             return True
 
         # 3. 检查页面内容特征（即使状态码是 200）
-        if resp.status_code == 200 and len(resp.text) < 5000:
+        # 只检查页面前 10000 字符，避免大页面性能问题
+        check_text = resp.text[:10000] if len(resp.text) > 10000 else resp.text
+        if resp.status_code == 200:
             blocked_patterns = [
-                "window.park",  # 域名停放页面
                 "cf-turnstile",  # Cloudflare Turnstile
                 "challenge-platform",  # Cloudflare 挑战
                 "_cf_chl_opt",  # Cloudflare 挑战选项
+                "challenges.cloudflare.com/turnstile",  # Turnstile 脚本
             ]
             for pattern in blocked_patterns:
-                if pattern in resp.text:
+                if pattern in check_text:
                     log.warning(f"[{self.name}] 检测到拦截特征: {pattern}")
                     return True
 

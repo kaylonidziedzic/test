@@ -11,9 +11,25 @@ class Settings(BaseSettings):
     HEADLESS: bool = False  # Linux下通常需要配合xvfb，DrissionPage建议False以过盾
     BROWSER_ARGS: list = [
         "--no-sandbox",
-        "--disable-gpu",
         "--disable-dev-shm-usage",
-        "--lang=en-US"
+        "--lang=en-US,en",
+        # 反检测参数
+        "--disable-blink-features=AutomationControlled",  # 关键：禁用自动化控制特征
+        "--disable-infobars",  # 禁用信息栏
+        "--disable-extensions",  # 禁用扩展
+        "--disable-default-apps",  # 禁用默认应用
+        "--disable-component-extensions-with-background-pages",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--disable-translate",
+        "--disable-features=TranslateUI",
+        "--metrics-recording-only",
+        "--no-first-run",
+        "--password-store=basic",
+        "--use-mock-keychain",
+        # 窗口大小（模拟真实用户）
+        "--window-size=1920,1080",
+        "--start-maximized",
     ]
 
     # 缓存配置

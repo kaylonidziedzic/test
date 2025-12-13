@@ -46,18 +46,31 @@ class RuleService:
         return f"{self.prefix}{rule_id}"
 
     def create_rule(self, rule: ScrapeConfig) -> str:
-        if not rule.id:
+        """创建或更新规则"""
+        is_update = False
+
+        if rule.id:
+            # 检查是否是更新
+            existing = self.get_rule(rule.id)
+            if existing:
+                is_update = True
+                # 保留原有的 created_at
+                rule.created_at = existing.created_at
+        else:
             rule.id = str(uuid.uuid4())[:8]
-        
-        rule.created_at = time.time()
+
+        if not is_update:
+            rule.created_at = time.time()
+
         key = self._get_key(rule.id)
-        
+
         try:
             self.client.set(key, rule.model_dump_json())
-            log.info(f"[RuleService] 创建规则: {rule.id} ({rule.name})")
+            action = "更新" if is_update else "创建"
+            log.info(f"[RuleService] {action}规则: {rule.id} ({rule.name})")
             return rule.id
         except Exception as e:
-            log.error(f"[RuleService] 创建失败: {e}")
+            log.error(f"[RuleService] 保存失败: {e}")
             raise
 
     def get_rule(self, rule_id: str) -> Optional[ScrapeConfig]:

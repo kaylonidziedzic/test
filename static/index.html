@@ -371,6 +371,76 @@
 
                         <!-- RULES 规则配置 -->
                         <div v-if="activeTab === 'rules'" class="space-y-6">
+                            <!-- 快速测试 -->
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                                <div class="px-6 py-4 border-b border-zinc-200 bg-gradient-to-r from-purple-50 to-blue-50">
+                                    <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
+                                        <i class="ri-flashlight-line text-purple-600"></i> 快速测试
+                                    </h3>
+                                    <p class="text-xs text-zinc-500 mt-1">输入 URL 快速测试采集效果，无需创建规则</p>
+                                </div>
+                                <div class="p-6 space-y-4">
+                                    <div class="flex gap-3">
+                                        <input v-model="testUrl" type="url" placeholder="https://example.com/page"
+                                            class="flex-1 bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-purple-500">
+                                        <button @click="testBypass" :disabled="testing || !testUrl"
+                                            class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2">
+                                            <i v-if="!testing" class="ri-play-line"></i>
+                                            <span class="loader w-4 h-4" v-else></span>
+                                            {{ testing ? '测试中...' : '测试' }}
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 mb-1">接口类型</label>
+                                            <select v-model="quickTestParams.api_type"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none">
+                                                <option value="proxy">JSON 代理</option>
+                                                <option value="raw">原始内容</option>
+                                                <option value="reader">阅读模式</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 mb-1">采集模式</label>
+                                            <select v-model="quickTestParams.mode"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none">
+                                                <option value="cookie">Cookie 复用</option>
+                                                <option value="browser">浏览器直读</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 mb-1">代理模式</label>
+                                            <select v-model="quickTestParams.proxy_mode"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none">
+                                                <option value="none">不使用代理</option>
+                                                <option value="pool">使用 IP 池</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <!-- 测试结果 -->
+                                    <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <span :class="['font-semibold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
+                                                <i :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
+                                                {{ testResult.success ? '成功' : '失败' }}
+                                            </span>
+                                            <span class="font-mono text-zinc-500 text-xs">{{ testResult.duration_ms }}ms</span>
+                                        </div>
+                                        <div v-if="testResult.error" class="text-xs text-red-600 p-2 bg-red-50 rounded border border-red-200">
+                                            {{ testResult.error }}
+                                        </div>
+                                        <div v-if="testResult.success" class="space-y-2 text-xs">
+                                            <div v-if="testResult.cookies_count" class="text-zinc-600">
+                                                <span class="font-semibold">Cookies:</span> {{ testResult.cookies_count }} 个
+                                            </div>
+                                            <div v-if="testResult.content_length" class="text-zinc-600">
+                                                <span class="font-semibold">内容长度:</span> {{ testResult.content_length.toLocaleString() }} 字符
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 规则列表 -->
                             <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
                                 <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
@@ -1235,141 +1305,6 @@
                             </div>
                         </div>
 
-                        <!-- ACTIONS -->
-                        <div v-if="activeTab === 'actions'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                                    <i class="ri-test-tube-line text-purple-600 text-lg"></i> URL 验证
-                                </h3>
-                                <div class="flex gap-2 mb-4">
-                                    <input v-model="testUrl"
-                                        class="flex-1 bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none placeholder-zinc-400"
-                                        placeholder="https://example.com" />
-                                    <button @click="testBypass" :disabled="testing || !testUrl"
-                                        class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
-                                        <i v-if="!testing" class="ri-play-line"></i>
-                                        <span>{{ testing ? '测试中...' : '检查' }}</span>
-                                    </button>
-                                </div>
-                                <div v-if="testResult"
-                                    class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg space-y-3">
-                                    <div class="flex justify-between items-center">
-                                        <span
-                                            :class="['font-bold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
-                                            <i
-                                                :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
-                                            {{ testResult.success ? '通过' : '失败' }}
-                                        </span>
-                                        <span class="font-mono text-zinc-600 text-xs">{{ testResult.duration_ms
-                                            }}ms</span>
-                                    </div>
-
-                                    <div v-if="testResult.error"
-                                        class="text-xs text-red-600 break-all p-2 bg-red-50 rounded border border-red-200">
-                                        <div class="font-semibold mb-1">错误信息：</div>
-                                        {{ testResult.error }}
-                                    </div>
-
-                                    <div v-if="testResult.success" class="space-y-2">
-                                        <div class="text-xs">
-                                            <span class="font-semibold text-zinc-700">User Agent:</span>
-                                            <div
-                                                class="mt-1 p-2 bg-white border border-zinc-200 rounded text-zinc-600 break-all">
-                                                {{ testResult.ua || 'N/A' }}
-                                            </div>
-                                        </div>
-                                        <div class="text-xs">
-                                            <span class="font-semibold text-zinc-700">Cookies ({{
-                                                testResult.cookies_count || 0 }}):</span>
-                                            <div
-                                                class="mt-1 p-3 bg-white border border-zinc-200 rounded max-h-64 overflow-y-auto space-y-2">
-                                                <div v-for="(value, name) in testResult.cookies" :key="name"
-                                                    class="p-2 bg-zinc-50 border border-zinc-200 rounded">
-                                                    <div class="font-mono text-xs font-semibold text-blue-600 mb-1">{{
-                                                        name }}</div>
-                                                    <div class="font-mono text-[11px] text-zinc-700 break-all">{{ value
-                                                        }}</div>
-                                                </div>
-                                                <div v-if="!testResult.cookies || Object.keys(testResult.cookies).length === 0"
-                                                    class="text-zinc-500 text-center py-4">无 cookies</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                                    <i class="ri-file-list-3-line text-blue-600 text-lg"></i> 批量验证
-                                </h3>
-                                <textarea v-model="batchTestUrls"
-                                    class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none mb-4 h-36 resize-none font-mono placeholder-zinc-400"
-                                    placeholder="每行一个 URL...&#10;https://example1.com&#10;https://example2.com"></textarea>
-                                <div class="flex justify-between items-center">
-                                    <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
-                                        <i class="ri-checkbox-circle-fill text-green-500"></i>
-                                        {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
-                                    </span>
-                                    <div class="flex items-center gap-3 ml-auto">
-                                        <div v-if="batchTesting" class="text-xs text-zinc-500 flex items-center gap-2">
-                                            <span class="loader w-4 h-4"></span> {{ batchProgress }}%
-                                        </div>
-                                        <button @click="batchTestBypass" :disabled="batchTesting"
-                                            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
-                                            <i v-if="!batchTesting" class="ri-play-list-line"></i>
-                                            <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <h3 class="text-sm font-semibold text-zinc-900 mb-5 flex items-center gap-2">
-                                    <i class="ri-server-line text-zinc-600"></i> 系统资源
-                                </h3>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div>
-                                        <div class="flex items-center justify-between mb-3">
-                                            <span class="text-sm font-medium text-zinc-700">CPU 使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
-                                                systemInfo.cpu?.percent || 0 }}%</span>
-                                        </div>
-                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
-                                                :style="{width: (systemInfo.cpu?.percent || 0) + '%'}"></div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.cpu?.cores || 0 }} 核心可用</p>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center justify-between mb-3">
-                                            <span class="text-sm font-medium text-zinc-700">内存使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
-                                                systemInfo.memory?.percent || 0 }}%</span>
-                                        </div>
-                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
-                                                :style="{width: (systemInfo.memory?.percent || 0) + '%'}"></div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.memory?.used_gb || 0 }} / {{
-                                            systemInfo.memory?.total_gb || 0 }} GB</p>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center justify-between mb-3">
-                                            <span class="text-sm font-medium text-zinc-700">磁盘使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
-                                                systemInfo.disk?.percent || 0 }}%</span>
-                                        </div>
-                                        <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
-                                                :style="{width: (systemInfo.disk?.percent || 0) + '%'}"></div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.disk?.used_gb || 0 }} / {{
-                                            systemInfo.disk?.total_gb || 0 }} GB</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </main>
             </div>
@@ -1528,17 +1463,22 @@
                 const activeTab = ref('monitor'), saving = ref(false), testing = ref(false);
                 const testUrl = ref(''), testResult = ref(null);
                 const batchTesting = ref(false), batchTestUrls = ref(''), batchTestResults = ref(null), batchProgress = ref(0);
+                // 快速测试参数
+                const quickTestParams = reactive({
+                    api_type: 'proxy',
+                    mode: 'cookie',
+                    proxy_mode: 'none'
+                });
                 const selectedRequest = ref(null), searchQuery = ref(''), logFilter = ref('all'), requestUserFilter = ref('all');
 
                 const tabs = [
                     { id: 'monitor', name: '总览', icon: 'ri-dashboard-3-line', desc: '实时监控和数据分析' },
-                    { id: 'rules', name: '规则配置', icon: 'ri-magic-line', desc: '创建和管理采集规则' },
+                    { id: 'rules', name: '规则配置', icon: 'ri-magic-line', desc: '创建规则和快速测试' },
                     { id: 'proxies', name: '代理管理', icon: 'ri-global-line', desc: '管理 IP 池和代理列表' },
                     { id: 'logs', name: '日志', icon: 'ri-file-list-3-line', desc: '系统日志和活动' },
                     { id: 'pool', name: '实例池', icon: 'ri-cpu-line', desc: '浏览器池管理' },
                     { id: 'cache', name: '缓存', icon: 'ri-database-2-line', desc: '缓存统计' },
                     { id: 'config', name: '配置', icon: 'ri-settings-4-line', desc: '系统配置' },
-                    { id: 'actions', name: '操作', icon: 'ri-flashlight-line', desc: '测试和操作工具' },
                     { id: 'users', name: '用户/密钥', icon: 'ri-key-2-line', desc: '管理 API Key 和权限', adminOnly: true },
                 ];
 
@@ -1955,12 +1895,13 @@
                         ruleForm.mode = rule.mode || 'cookie';
                         ruleForm.selectors = Object.entries(rule.selectors || {}).map(([k, v]) => ({ key: k, selector: v }));
                         ruleForm.wait_for = rule.wait_for || '';
-                        ruleForm.api_type = rule.api_type || 'proxy';
+                        // 使用严格判断，避免默认值覆盖
+                        ruleForm.api_type = rule.api_type !== undefined ? rule.api_type : 'proxy';
                         ruleForm.headers_list = Object.entries(rule.headers || {}).map(([k, v]) => ({ key: k, value: v }));
                         ruleForm.body = rule.body || '';
-                        ruleForm.body_type = rule.body_type || 'none';
-                        ruleForm.is_public = rule.is_public || false;
-                        ruleForm.proxy_mode = rule.proxy_mode || 'none';
+                        ruleForm.body_type = rule.body_type !== undefined ? rule.body_type : 'none';
+                        ruleForm.is_public = rule.is_public === true;
+                        ruleForm.proxy_mode = rule.proxy_mode !== undefined ? rule.proxy_mode : 'none';
                         ruleForm.proxy = rule.proxy || '';
                         ruleForm.cache_ttl = rule.cache_ttl || 0;
                     }
@@ -2276,7 +2217,7 @@
                 return {
                     authenticated, apiKey, apiBaseUrl, autoRefresh, sseConnected, loading, loginError, activeTab, tabs, visibleTabs, currentTabName, currentTabDesc,
                     status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo, requestUserFilter, userOptions, apiUsers, isAdmin,
-                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults, batchProgress, newUserName, newUserRole, userLoading, rotatingUser,
+                    toast, saving, testing, testUrl, testResult, quickTestParams, batchTesting, batchTestUrls, batchTestResults, batchProgress, newUserName, newUserRole, userLoading, rotatingUser,
                     selectedRequest, searchQuery, logs, userLogs, logFilter, filteredLogs, filteredUserLogs, requestDistribution, filteredRequests,
                     // 规则配置相关
                     rules, rulesLoading, showRuleForm, editingRule, ruleForm, ruleTestResult, ruleTesting, copiedRuleId,

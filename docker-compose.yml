@@ -6,13 +6,18 @@ services:
     container_name: cf-gateway
     ports:
       - "8000:8000"
+    depends_on:
+      - redis
     environment:
       - API_KEY=${API_KEY:-change_me_please}
+      - REDIS_URL=redis://redis:6379
       - HEADLESS=false
     volumes:
       - ./data:/app/data  # 持久化缓存数据库
+      - ./static:/app/static # 挂载静态文件
     restart: unless-stopped
     # 当健康检查失败时，Docker 会自动重启容器
+
     # 配合 Dockerfile 中的 HEALTHCHECK 使用
     healthcheck:
       test: ["CMD", "python", "/app/healthcheck.py"]
@@ -27,3 +32,27 @@ services:
           memory: 2G
         reservations:
           memory: 512M
+
+  redis:
+    image: redis:alpine
+    container_name: cf-gateway-redis
+    restart: always
+    volumes:
+      - ./data/redis:/data
+
+  worker:
+    build: .
+    container_name: cf-gateway-worker
+    command: arq services.job_queue.WorkerSettings
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - HEADLESS=true  # Worker 通常运行在无头模式
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G

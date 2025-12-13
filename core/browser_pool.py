@@ -18,6 +18,8 @@ from DrissionPage import ChromiumOptions, ChromiumPage
 from config import settings
 from utils.fingerprint import get_fingerprint_script, get_webrtc_disable_script, get_stealth_script
 from utils.logger import log
+from services.proxy_manager import proxy_manager
+
 
 # Linux下启动虚拟显示器
 if sys.platform.startswith("linux"):
@@ -87,7 +89,14 @@ class BrowserPool:
         for arg in settings.BROWSER_ARGS:
             co.set_argument(arg)
 
+        # 注入代理
+        proxy = proxy_manager.get_proxy()
+        if proxy:
+            log.info(f"[BrowserPool] 为新实例分配代理: {proxy}")
+            co.set_argument(f"--proxy-server={proxy}")
+
         co.headless(settings.HEADLESS)
+
         page = ChromiumPage(co)
 
         # 注入反检测脚本（必须最先注入）

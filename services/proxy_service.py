@@ -112,6 +112,7 @@ def proxy_request(
     fetcher: Optional[str] = None,
     data_encoding: Optional[str] = None,
     auto_fallback: bool = True,
+    proxy: Optional[str] = None,
 ) -> Union[FetchResponse, Any]:
     """代理请求核心接口
 
@@ -168,6 +169,7 @@ def proxy_request(
             data=data,
             json=json,
             data_encoding=data_encoding,
+            proxy=proxy,
         )
 
         # 检查是否被拦截（即使返回了响应）

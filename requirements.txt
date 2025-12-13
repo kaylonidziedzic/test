@@ -10,3 +10,6 @@ python-dotenv
 pydantic-settings
 curl_cffi>=0.5.10
 psutil           # 系统监控
+redis>=5.0.0     # Redis 客户端
+arq>=0.25.0      # 异步任务队列
+beautifulsoup4   # HTML 解析

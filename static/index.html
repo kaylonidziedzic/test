@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -23,19 +26,63 @@
     </script>
 
     <style>
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
-        .loader { border: 2px solid rgba(59,130,246,0.2); border-left-color: #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        [v-cloak] { display: none !important; }
-        .log-line { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #3f3f46; }
-        .log-line.log-info { color: #3b82f6; }
-        .log-line.log-warning { color: #f59e0b; }
-        .log-line.log-error { color: #ef4444; }
-        .log-line.log-success { color: #10b981; }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d4d4d8;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1aa;
+        }
+
+        .loader {
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        [v-cloak] {
+            display: none !important;
+        }
+
+        .log-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #3f3f46;
+        }
+
+        .log-line.log-info {
+            color: #3b82f6;
+        }
+
+        .log-line.log-warning {
+            color: #f59e0b;
+        }
+
+        .log-line.log-error {
+            color: #ef4444;
+        }
+
+        .log-line.log-success {
+            color: #10b981;
+        }
     </style>
 </head>
+
 <body class="antialiased h-screen overflow-hidden bg-zinc-50">
 
     <div id="init-loader" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
@@ -46,10 +93,12 @@
     <div id="app" v-cloak class="h-full flex">
 
         <!-- Login -->
-        <div v-if="!authenticated" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+        <div v-if="!authenticated"
+            class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
             <div class="w-full max-w-sm bg-white border border-zinc-200 rounded-xl p-8 shadow-2xl">
                 <div class="flex items-center gap-3 mb-8">
-                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <div
+                        class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg">
                         <i class="ri-shield-keyhole-fill text-2xl"></i>
                     </div>
                     <div>
@@ -105,7 +154,8 @@
                             <span class="text-xs text-zinc-600 font-mono">{{ status.uptime_human || '在线' }}</span>
                         </div>
                     </div>
-                    <button @click="logout" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                    <button @click="logout"
+                        class="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
                         <i class="ri-logout-box-r-line"></i> 退出登录
                     </button>
                 </div>
@@ -114,54 +164,68 @@
             <!-- Mobile Nav -->
             <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40">
                 <div class="flex items-center justify-around px-2">
-                    <button v-for="tab in visibleTabs.slice(0, 5)" :key="tab.id" @click="switchTab(tab.id)"
-                        :class="['flex flex-col items-center py-2 px-3 text-xs font-medium relative',
+                    <button v-for="tab in visibleTabs.slice(0, 5)" :key="tab.id" @click="switchTab(tab.id)" :class="['flex flex-col items-center py-2 px-3 text-xs font-medium relative',
                             activeTab === tab.id ? 'text-blue-600' : 'text-zinc-500']">
                         <i :class="[tab.icon, 'text-xl mb-0.5']"></i>
                         <span class="text-[10px]">{{ tab.name }}</span>
-                        <span v-if="activeTab === tab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full"></span>
+                        <span v-if="activeTab === tab.id"
+                            class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full"></span>
                     </button>
                 </div>
             </div>
 
             <!-- Main -->
             <div class="flex-1 flex flex-col bg-zinc-50 overflow-hidden">
-                <header class="h-16 border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8 bg-white/80 backdrop-blur-md">
+                <header
+                    class="h-16 border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8 bg-white/80 backdrop-blur-md">
                     <div>
                         <h2 class="text-sm font-semibold text-zinc-900">{{ currentTabName }}</h2>
                         <p class="text-xs text-zinc-500 hidden sm:block">{{ currentTabDesc }}</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="hidden xl:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                        <div
+                            class="hidden xl:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
                             <i class="ri-link text-zinc-400 text-sm"></i>
                             <input v-model="apiBaseUrl" type="text" placeholder="后端地址，例如 http://localhost:8000"
                                 class="bg-transparent text-xs text-zinc-900 placeholder-zinc-500 outline-none w-56">
-                            <button @click="saveBaseUrl" class="text-xs text-blue-600 hover:text-blue-500 font-semibold">保存</button>
+                            <button @click="saveBaseUrl"
+                                class="text-xs text-blue-600 hover:text-blue-500 font-semibold">保存</button>
                         </div>
-                        <div class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
-                            <span :class="['w-2 h-2 rounded-full', sseConnected ? 'bg-green-500 animate-pulse' : autoRefresh ? 'bg-amber-500' : 'bg-zinc-300']"></span>
-                            <span class="text-[11px] text-zinc-600 font-medium">{{ sseConnected ? 'SSE 已连接' : autoRefresh ? '轮询中' : '已暂停' }}</span>
+                        <div
+                            class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                            <span
+                                :class="['w-2 h-2 rounded-full', sseConnected ? 'bg-green-500 animate-pulse' : autoRefresh ? 'bg-amber-500' : 'bg-zinc-300']"></span>
+                            <span class="text-[11px] text-zinc-600 font-medium">{{ sseConnected ? 'SSE 已连接' :
+                                autoRefresh ? '轮询中' : '已暂停' }}</span>
                         </div>
-                        <div class="hidden md:flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-lg px-3 py-1.5">
+                        <div
+                            class="hidden md:flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-lg px-3 py-1.5">
                             <i class="ri-search-line text-zinc-400 text-sm"></i>
                             <input v-model="searchQuery" type="text" placeholder="搜索..."
                                 class="bg-transparent text-xs text-zinc-900 placeholder-zinc-500 outline-none w-32">
                         </div>
-                        <div class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
+                        <div
+                            class="hidden lg:flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-1.5">
                             <i class="ri-user-line text-zinc-400 text-sm"></i>
-                            <select v-model="requestUserFilter" class="bg-transparent text-xs text-zinc-900 outline-none">
+                            <select v-model="requestUserFilter"
+                                class="bg-transparent text-xs text-zinc-900 outline-none">
                                 <option value="all">全部用户</option>
                                 <option v-for="u in userOptions" :key="u" :value="u">{{ u }}</option>
                             </select>
                         </div>
-                        <span class="hidden sm:inline text-xs text-zinc-500 font-mono">v{{ status.version || '4.3.0' }}</span>
-                        <button @click="toggleAutoRefresh" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                        <span class="hidden sm:inline text-xs text-zinc-500 font-mono">v{{ status.version || '4.3.0'
+                            }}</span>
+                        <button @click="toggleAutoRefresh"
+                            class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
                             <i :class="[autoRefresh ? 'ri-pause-line' : 'ri-play-line', 'text-sm']"></i>
                         </button>
-                        <button @click="muteErrors()" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all" title="静音错误提示 60 秒">
+                        <button @click="muteErrors()"
+                            class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all"
+                            title="静音错误提示 60 秒">
                             <i class="ri-volume-mute-line text-sm"></i>
                         </button>
-                        <button @click="loadData" class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
+                        <button @click="loadData"
+                            class="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all">
                             <i class="ri-refresh-line text-sm"></i>
                         </button>
                     </div>
@@ -173,55 +237,70 @@
                         <!-- MONITOR -->
                         <div v-if="activeTab === 'monitor'" class="space-y-6">
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
                                     <div class="flex items-start justify-between mb-3">
                                         <div class="text-xs font-semibold text-zinc-500 uppercase">总请求数</div>
-                                        <div class="p-2 bg-blue-50 rounded-lg"><i class="ri-bar-chart-box-line text-blue-600"></i></div>
+                                        <div class="p-2 bg-blue-50 rounded-lg"><i
+                                                class="ri-bar-chart-box-line text-blue-600"></i></div>
                                     </div>
-                                    <div class="text-3xl font-bold text-zinc-900">{{ (stats.requests?.total || 0).toLocaleString() }}</div>
+                                    <div class="text-3xl font-bold text-zinc-900">{{ (stats.requests?.total ||
+                                        0).toLocaleString() }}</div>
                                 </div>
-                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
                                     <div class="flex items-start justify-between mb-3">
                                         <div class="text-xs font-semibold text-zinc-500 uppercase">成功率</div>
-                                        <div class="p-2 bg-green-50 rounded-lg"><i class="ri-checkbox-circle-line text-green-600"></i></div>
+                                        <div class="p-2 bg-green-50 rounded-lg"><i
+                                                class="ri-checkbox-circle-line text-green-600"></i></div>
                                     </div>
-                                    <div class="text-3xl font-bold text-green-600">{{ stats.requests?.success_rate || 0 }}%</div>
+                                    <div class="text-3xl font-bold text-green-600">{{ stats.requests?.success_rate || 0
+                                        }}%</div>
                                 </div>
-                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
                                     <div class="flex items-start justify-between mb-3">
                                         <div class="text-xs font-semibold text-zinc-500 uppercase">浏览器池</div>
-                                        <div class="p-2 bg-purple-50 rounded-lg"><i class="ri-cpu-line text-purple-600"></i></div>
+                                        <div class="p-2 bg-purple-50 rounded-lg"><i
+                                                class="ri-cpu-line text-purple-600"></i></div>
                                     </div>
                                     <div class="flex items-baseline gap-2">
-                                        <div class="text-3xl font-bold text-zinc-900">{{ stats.browser_pool?.available || 0 }}</div>
+                                        <div class="text-3xl font-bold text-zinc-900">{{ stats.browser_pool?.available
+                                            || 0 }}</div>
                                         <div class="text-lg text-zinc-500">/ {{ stats.browser_pool?.total || 0 }}</div>
                                     </div>
                                 </div>
-                                <div class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-5 hover:shadow-lg transition-all">
                                     <div class="flex items-start justify-between mb-3">
                                         <div class="text-xs font-semibold text-zinc-500 uppercase">平均延迟</div>
-                                        <div class="p-2 bg-orange-50 rounded-lg"><i class="ri-timer-line text-orange-600"></i></div>
+                                        <div class="p-2 bg-orange-50 rounded-lg"><i
+                                                class="ri-timer-line text-orange-600"></i></div>
                                     </div>
-                                    <div class="text-3xl font-bold text-zinc-900">{{ stats.requests?.avg_time_ms || 0 }}<span class="text-lg font-normal text-zinc-500 ml-1">ms</span></div>
+                                    <div class="text-3xl font-bold text-zinc-900">{{ stats.requests?.avg_time_ms || 0
+                                        }}<span class="text-lg font-normal text-zinc-500 ml-1">ms</span></div>
                                 </div>
                             </div>
 
                             <!-- Charts -->
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
                                     <div class="flex items-center justify-between mb-6">
                                         <div>
                                             <h3 class="text-sm font-semibold text-zinc-900">成功率趋势</h3>
                                             <p class="text-xs text-zinc-500 mt-1">最近 60 个数据点</p>
                                         </div>
-                                        <span class="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium border border-blue-200">
+                                        <span
+                                            class="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium border border-blue-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> 实时
                                         </span>
                                     </div>
                                     <div class="h-64"><line-chart :data="timeSeries"></line-chart></div>
                                 </div>
 
-                                <div class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-white border border-zinc-200 rounded-xl p-6 hover:shadow-lg transition-all">
                                     <div class="mb-6">
                                         <h3 class="text-sm font-semibold text-zinc-900">请求分布</h3>
                                         <p class="text-xs text-zinc-500 mt-1">按状态码分类</p>
@@ -233,10 +312,13 @@
                             </div>
 
                             <!-- Table -->
-                            <div class="border border-zinc-200 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all">
-                                <div class="bg-zinc-50 px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
+                            <div
+                                class="border border-zinc-200 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all">
+                                <div
+                                    class="bg-zinc-50 px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
                                     <h3 class="text-sm font-semibold text-zinc-900">最近活动</h3>
-                                    <button @click="exportRequests" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 transition-all">
+                                    <button @click="exportRequests"
+                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 transition-all">
                                         <i class="ri-download-line"></i> 导出
                                     </button>
                                 </div>
@@ -252,19 +334,25 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-zinc-200 text-zinc-700">
-                                            <tr v-for="req in filteredRequests" :key="req.id" class="hover:bg-zinc-50 transition-all">
+                                            <tr v-for="req in filteredRequests" :key="req.id"
+                                                class="hover:bg-zinc-50 transition-all">
                                                 <td class="px-6 py-4">
-                                                    <span :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
+                                                    <span
+                                                        :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
                                                         req.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
-                                                        <i :class="req.success ? 'ri-checkbox-circle-fill mr-1' : 'ri-close-circle-fill mr-1'"></i>
+                                                        <i
+                                                            :class="req.success ? 'ri-checkbox-circle-fill mr-1' : 'ri-close-circle-fill mr-1'"></i>
                                                         {{ req.success ? '成功' : '失败' }}
                                                     </span>
                                                 </td>
-                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate">{{ req.url }}</td>
-                                                <td class="px-6 py-4 text-right font-mono text-zinc-600">{{ req.duration_ms }}ms</td>
+                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate">{{ req.url }}
+                                                </td>
+                                                <td class="px-6 py-4 text-right font-mono text-zinc-600">{{
+                                                    req.duration_ms }}ms</td>
                                                 <td class="px-6 py-4 text-right text-zinc-600">{{ req.timestamp?.split(' ')[1] }}</td>
                                                 <td class="px-6 py-4 text-center">
-                                                    <button @click="showRequestDetail(req)" class="text-zinc-500 hover:text-blue-600 transition-all">
+                                                    <button @click="showRequestDetail(req)"
+                                                        class="text-zinc-500 hover:text-blue-600 transition-all">
                                                         <i class="ri-eye-line text-lg"></i>
                                                     </button>
                                                 </td>
@@ -281,12 +369,378 @@
                             </div>
                         </div>
 
+                        <!-- RULES 规则配置 -->
+                        <div v-if="activeTab === 'rules'" class="space-y-6">
+                            <!-- 规则列表 -->
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
+                                            <i class="ri-magic-line text-purple-600"></i> 采集规则
+                                        </h3>
+                                        <p class="text-xs text-zinc-500 mt-1">创建规则后获取专属 Permlink，无需编码即可采集数据</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button @click="loadRules" :disabled="rulesLoading"
+                                            class="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-2">
+                                            <i class="ri-refresh-line"></i> 刷新
+                                        </button>
+                                        <button @click="openRuleForm()"
+                                            class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-lg flex items-center gap-2">
+                                            <i class="ri-add-line"></i> 新建规则
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 规则表格 -->
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left">规则名称</th>
+                                                <th class="px-6 py-3 text-left">目标 URL</th>
+                                                <th class="px-6 py-3 text-center">接口</th>
+                                                <th class="px-6 py-3 text-center">访问</th>
+                                                <th class="px-6 py-3 text-left">Permlink</th>
+                                                <th class="px-6 py-3 text-center">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-zinc-200 text-zinc-700">
+                                            <tr v-for="rule in rules" :key="rule.id" class="hover:bg-zinc-50 transition-all">
+                                                <td class="px-6 py-4">
+                                                    <div class="font-medium text-zinc-900">{{ rule.name }}</div>
+                                                    <div class="text-xs text-zinc-500">{{ formatRuleTime(rule.created_at) }}</div>
+                                                </td>
+                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate" :title="rule.target_url">
+                                                    {{ rule.target_url }}
+                                                </td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
+                                                        (rule.api_type || 'proxy') === 'proxy' ? 'bg-purple-100 text-purple-700' :
+                                                        (rule.api_type || 'proxy') === 'raw' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700']">
+                                                        {{ (rule.api_type || 'proxy') === 'proxy' ? 'JSON' : (rule.api_type || 'proxy') === 'raw' ? 'Raw' : 'Reader' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
+                                                        rule.is_public ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-600']">
+                                                        <i :class="rule.is_public ? 'ri-lock-unlock-line mr-1' : 'ri-lock-line mr-1'"></i>
+                                                        {{ rule.is_public ? '公开' : '私有' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center gap-2">
+                                                        <code class="text-xs bg-zinc-100 px-2 py-1 rounded font-mono text-purple-600">/v1/run/{{ rule.id }}</code>
+                                                        <button @click="copyPermlink(rule)"
+                                                            class="p-1 text-zinc-400 hover:text-purple-600 transition-all"
+                                                            :title="copiedRuleId === rule.id ? '已复制!' : '复制链接'">
+                                                            <i :class="copiedRuleId === rule.id ? 'ri-check-line text-green-500' : 'ri-file-copy-line'"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <div class="flex items-center justify-center gap-1">
+                                                        <button @click="testRule(rule)" :disabled="ruleTesting"
+                                                            class="p-2 text-zinc-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                            title="测试规则">
+                                                            <i class="ri-play-line"></i>
+                                                        </button>
+                                                        <button @click="openRuleForm(rule)"
+                                                            class="p-2 text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                            title="编辑">
+                                                            <i class="ri-edit-line"></i>
+                                                        </button>
+                                                        <button @click="deleteRule(rule)"
+                                                            class="p-2 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                            title="删除">
+                                                            <i class="ri-delete-bin-line"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="rules.length === 0">
+                                                <td colspan="6" class="px-6 py-16 text-center">
+                                                    <i class="ri-magic-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                    <p class="text-zinc-500 text-sm mb-4">暂无采集规则</p>
+                                                    <button @click="openRuleForm()"
+                                                        class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-lg inline-flex items-center gap-2">
+                                                        <i class="ri-add-line"></i> 创建第一个规则
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 测试结果 -->
+                            <div v-if="ruleTestResult" class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <i class="ri-test-tube-line text-green-600"></i> 测试结果
+                                </h3>
+                                <div v-if="ruleTestResult.error" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                    <div class="font-semibold mb-1">错误：</div>
+                                    {{ ruleTestResult.error }}
+                                </div>
+                                <div v-else class="space-y-4">
+                                    <div v-if="ruleTestResult.meta" class="p-3 bg-zinc-50 rounded-lg">
+                                        <div class="text-xs text-zinc-500 mb-1">规则信息</div>
+                                        <div class="font-mono text-sm">{{ ruleTestResult.meta.name }} ({{ ruleTestResult.meta.rule_id }})</div>
+                                    </div>
+                                    <div v-if="ruleTestResult.data && Object.keys(ruleTestResult.data).length > 0">
+                                        <div class="text-xs text-zinc-500 mb-2">提取数据</div>
+                                        <div class="space-y-2">
+                                            <div v-for="(value, key) in ruleTestResult.data" :key="key"
+                                                class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                <div class="text-xs font-semibold text-green-700 mb-1">{{ key }}</div>
+                                                <div class="text-sm text-zinc-800 break-all">{{ value || '(空)' }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="ruleTestResult.raw_length" class="text-xs text-zinc-500">
+                                        原始内容长度: {{ ruleTestResult.raw_length.toLocaleString() }} 字符
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 使用说明 -->
+                            <div class="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+                                <h3 class="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                                    <i class="ri-lightbulb-line"></i> 使用说明
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-purple-800">
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">1</span>
+                                        <div>
+                                            <div class="font-semibold">创建规则</div>
+                                            <div class="text-purple-600">填写目标 URL 和 CSS 选择器</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">2</span>
+                                        <div>
+                                            <div class="font-semibold">获取 Permlink</div>
+                                            <div class="text-purple-600">保存后自动生成专属链接</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">3</span>
+                                        <div>
+                                            <div class="font-semibold">直接调用</div>
+                                            <div class="text-purple-600">GET 请求 Permlink 即可获取数据</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 规则编辑弹窗 -->
+                        <div v-if="showRuleForm" @click="showRuleForm = false"
+                            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div @click.stop class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+                                <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
+                                    <h3 class="text-base font-semibold text-zinc-900">
+                                        {{ editingRule ? '编辑规则' : '新建采集规则' }}
+                                    </h3>
+                                    <button @click="showRuleForm = false"
+                                        class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
+                                        <i class="ri-close-line text-xl"></i>
+                                    </button>
+                                </div>
+                                <div class="p-6 space-y-5">
+                                    <!-- 基本信息 -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">规则名称</label>
+                                            <input v-model="ruleForm.name" type="text" placeholder="例如：获取商品价格"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">接口类型</label>
+                                            <select v-model="ruleForm.api_type"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
+                                                <option value="proxy">JSON 代理（返回结构化数据）</option>
+                                                <option value="raw">原始内容（返回二进制/原文）</option>
+                                                <option value="reader">阅读模式（返回处理后 HTML）</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-700 mb-2">目标 URL <span class="text-red-500">*</span></label>
+                                        <input v-model="ruleForm.target_url" type="url" placeholder="https://example.com/page"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none font-mono">
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">请求方式</label>
+                                            <select v-model="ruleForm.method"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
+                                                <option value="GET">GET</option>
+                                                <option value="POST">POST</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">采集模式</label>
+                                            <select v-model="ruleForm.mode"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
+                                                <option value="cookie">Cookie 复用</option>
+                                                <option value="browser">浏览器直读</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">访问控制</label>
+                                            <select v-model="ruleForm.is_public"
+                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
+                                                <option :value="false">私有（需 API Key）</option>
+                                                <option :value="true">公开（无需认证）</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- 代理配置 -->
+                                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                                        <div class="flex items-center gap-2 text-blue-700 text-xs font-semibold">
+                                            <i class="ri-global-line"></i> 代理配置
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs text-zinc-600 mb-1">代理模式</label>
+                                                <select v-model="ruleForm.proxy_mode"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                    <option value="none">不使用代理（直连）</option>
+                                                    <option value="pool">使用 IP 池（自动轮换）</option>
+                                                    <option value="fixed">指定代理 IP</option>
+                                                </select>
+                                            </div>
+                                            <div v-if="ruleForm.proxy_mode === 'fixed'">
+                                                <label class="block text-xs text-zinc-600 mb-1">代理地址</label>
+                                                <input v-model="ruleForm.proxy" type="text" placeholder="socks5://ip:port 或 http://ip:port"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-blue-600">
+                                            <i class="ri-information-line mr-1"></i>
+                                            提示：使用 IP 池需要先在「代理管理」页面配置代理列表
+                                        </p>
+                                    </div>
+
+                                    <!-- POST 请求体配置 -->
+                                    <div v-if="ruleForm.method === 'POST'" class="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                                        <div class="flex items-center gap-2 text-orange-700 text-xs font-semibold">
+                                            <i class="ri-send-plane-line"></i> POST 请求体配置
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs text-zinc-600 mb-1">Body 类型</label>
+                                                <select v-model="ruleForm.body_type"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                    <option value="none">无</option>
+                                                    <option value="json">JSON</option>
+                                                    <option value="form">Form (x-www-form-urlencoded)</option>
+                                                    <option value="raw">Raw Text</option>
+                                                </select>
+                                            </div>
+                                            <div v-if="ruleForm.mode === 'browser'">
+                                                <label class="block text-xs text-zinc-600 mb-1">等待元素</label>
+                                                <input v-model="ruleForm.wait_for" type="text" placeholder=".content"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
+                                            </div>
+                                        </div>
+                                        <div v-if="ruleForm.body_type !== 'none'">
+                                            <label class="block text-xs text-zinc-600 mb-1">请求体内容</label>
+                                            <textarea v-model="ruleForm.body" rows="3"
+                                                :placeholder="ruleForm.body_type === 'json' ? '{key: value}' : ruleForm.body_type === 'form' ? 'key1=value1&key2=value2' : '原始文本...'"
+                                                class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none resize-none"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <!-- 自定义请求头 -->
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <label class="text-xs font-semibold text-zinc-700">自定义请求头（可选）</label>
+                                            <button @click="addHeader" type="button"
+                                                class="text-xs text-blue-600 hover:text-blue-500 flex items-center gap-1">
+                                                <i class="ri-add-line"></i> 添加
+                                            </button>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div v-for="(h, idx) in ruleForm.headers_list" :key="idx"
+                                                class="flex items-center gap-2">
+                                                <input v-model="h.key" type="text" placeholder="Header 名"
+                                                    class="flex-1 bg-zinc-50 border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                <input v-model="h.value" type="text" placeholder="值"
+                                                    class="flex-[2] bg-zinc-50 border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                <button @click="removeHeader(idx)" type="button"
+                                                    class="p-2 text-zinc-400 hover:text-red-500">
+                                                    <i class="ri-close-line"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CSS 选择器（仅 proxy 模式） -->
+                                    <div v-if="ruleForm.api_type === 'proxy'">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <label class="text-xs font-semibold text-zinc-700">数据提取规则（CSS 选择器）</label>
+                                            <button @click="addSelector" type="button"
+                                                class="text-xs text-purple-600 hover:text-purple-500 flex items-center gap-1">
+                                                <i class="ri-add-line"></i> 添加字段
+                                            </button>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div v-for="(sel, idx) in ruleForm.selectors" :key="idx"
+                                                class="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                                                <input v-model="sel.key" type="text" placeholder="字段名，如 title"
+                                                    class="flex-1 bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500">
+                                                <span class="text-zinc-400">:</span>
+                                                <input v-model="sel.selector" type="text" placeholder="CSS 选择器，如 h1.title"
+                                                    class="flex-[2] bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-purple-500">
+                                                <button @click="removeSelector(idx)" type="button"
+                                                    class="p-2 text-zinc-400 hover:text-red-500 transition-all">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
+                                            </div>
+                                            <div v-if="ruleForm.selectors.length === 0"
+                                                class="p-4 bg-zinc-50 rounded-lg border border-dashed border-zinc-300 text-center">
+                                                <p class="text-xs text-zinc-500 mb-2">暂无提取规则，将返回完整响应</p>
+                                                <button @click="addSelector" type="button"
+                                                    class="text-xs text-purple-600 hover:text-purple-500">
+                                                    <i class="ri-add-line mr-1"></i>添加第一个字段
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-zinc-500 mt-2">
+                                            <i class="ri-information-line mr-1"></i>
+                                            提示：使用浏览器 F12 查看元素，右键复制 CSS 选择器
+                                        </p>
+                                    </div>
+
+                                    <!-- 操作按钮 -->
+                                    <div class="flex justify-end gap-3 pt-4 border-t border-zinc-200">
+                                        <button @click="showRuleForm = false" type="button"
+                                            class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg transition-all">
+                                            取消
+                                        </button>
+                                        <button @click="saveRule" :disabled="rulesLoading"
+                                            class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white text-sm font-semibold rounded-lg shadow-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                            <span v-if="rulesLoading" class="loader w-4 h-4"></span>
+                                            <i v-else class="ri-save-line"></i>
+                                            {{ rulesLoading ? '保存中...' : (editingRule ? '更新规则' : '创建规则') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- USERS (Admin Only) -->
                         <div v-if="activeTab === 'users'" class="space-y-6">
                             <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
                                 <div class="flex items-center justify-between mb-4">
                                     <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2"><i class="ri-key-2-line text-blue-600"></i> 用户与密钥</h3>
+                                        <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2"><i
+                                                class="ri-key-2-line text-blue-600"></i> 用户与密钥</h3>
                                         <p class="text-xs text-zinc-500 mt-1">仅文件存储部分可管理，环境变量中的密钥视为只读</p>
                                     </div>
                                     <button @click="loadUsers" :disabled="userLoading"
@@ -307,10 +761,12 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr v-for="u in apiUsers" :key="u.user" class="border-t border-zinc-100">
+                                                    <tr v-for="u in apiUsers" :key="u.user"
+                                                        class="border-t border-zinc-100">
                                                         <td class="py-2 font-medium text-zinc-900">{{ u.user }}</td>
                                                         <td class="py-2 text-xs">
-                                                            <span :class="['px-2 py-1 rounded-full font-semibold', u.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700']">
+                                                            <span
+                                                                :class="['px-2 py-1 rounded-full font-semibold', u.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700']">
                                                                 {{ u.role || 'user' }}
                                                             </span>
                                                         </td>
@@ -318,29 +774,37 @@
                                                             {{ u.key }}
                                                         </td>
                                                         <td class="py-2 text-right flex items-center gap-2 justify-end">
-                                                            <button @click="rotateUser(u)" class="text-xs px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded border border-zinc-200" :disabled="rotatingUser===u.user">
+                                                            <button @click="rotateUser(u)"
+                                                                class="text-xs px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded border border-zinc-200"
+                                                                :disabled="rotatingUser===u.user">
                                                                 {{ rotatingUser===u.user ? '重置中...' : '重置 Key' }}
                                                             </button>
-                                                            <button @click="deleteUser(u)" class="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200">删除</button>
+                                                            <button @click="deleteUser(u)"
+                                                                class="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200">删除</button>
                                                         </td>
                                                     </tr>
                                                     <tr v-if="!apiUsers.length">
-                                                        <td colspan="4" class="py-4 text-center text-zinc-500 text-xs">暂无可管理用户</td>
+                                                        <td colspan="4" class="py-4 text-center text-zinc-500 text-xs">
+                                                            暂无可管理用户</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
                                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                                        <h4 class="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2"><i class="ri-user-add-line text-green-600"></i> 创建用户</h4>
+                                        <h4 class="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2"><i
+                                                class="ri-user-add-line text-green-600"></i> 创建用户</h4>
                                         <div class="space-y-3">
                                             <div>
-                                                <label class="block text-xs font-semibold text-zinc-700 mb-1">用户名</label>
-                                                <input v-model="newUserName" class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                                <label
+                                                    class="block text-xs font-semibold text-zinc-700 mb-1">用户名</label>
+                                                <input v-model="newUserName"
+                                                    class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-semibold text-zinc-700 mb-1">角色</label>
-                                                <select v-model="newUserRole" class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                                <select v-model="newUserRole"
+                                                    class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                                                     <option value="user">user</option>
                                                     <option value="admin">admin</option>
                                                 </select>
@@ -356,10 +820,139 @@
                             </div>
                         </div>
 
+                        <!-- PROXIES 代理管理 -->
+                        <div v-if="activeTab === 'proxies'" class="space-y-6">
+                            <!-- 代理统计 -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                            <i class="ri-global-line text-2xl text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-zinc-900">{{ proxyStats.total }}</div>
+                                            <div class="text-xs text-zinc-500">总代理数</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                            <i class="ri-check-double-line text-2xl text-green-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-green-600">{{ proxyStats.available }}</div>
+                                            <div class="text-xs text-zinc-500">可用代理</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                            <i class="ri-shuffle-line text-2xl text-purple-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-zinc-900">{{ proxyStats.strategy === 'round_robin' ? '轮询' : proxyStats.strategy }}</div>
+                                            <div class="text-xs text-zinc-500">轮换策略</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 添加代理 -->
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <i class="ri-add-circle-line text-blue-600"></i> 添加代理
+                                </h3>
+                                <div class="space-y-3">
+                                    <textarea v-model="newProxyText" rows="4"
+                                        placeholder="每行一个代理地址，支持格式：&#10;socks5://ip:port&#10;http://user:pass@ip:port&#10;ip:port"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                                    <div class="flex items-center gap-3">
+                                        <button @click="addProxies" :disabled="proxyLoading"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50">
+                                            <i class="ri-add-line"></i> 添加代理
+                                        </button>
+                                        <button @click="reloadProxies" :disabled="proxyLoading"
+                                            class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium rounded-lg border border-zinc-200 flex items-center gap-2">
+                                            <i class="ri-refresh-line"></i> 从文件重新加载
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 代理列表 -->
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                                    <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
+                                        <i class="ri-list-check text-blue-600"></i> 代理列表
+                                    </h3>
+                                    <button @click="loadProxies" :disabled="proxyLoading"
+                                        class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-1">
+                                        <i class="ri-refresh-line"></i> 刷新
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto max-h-96">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase sticky top-0">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left">代理地址</th>
+                                                <th class="px-6 py-3 text-center">类型</th>
+                                                <th class="px-6 py-3 text-center">状态</th>
+                                                <th class="px-6 py-3 text-center">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-zinc-200">
+                                            <tr v-for="(proxy, idx) in proxyList" :key="idx" class="hover:bg-zinc-50">
+                                                <td class="px-6 py-3 font-mono text-xs">{{ proxy.address || proxy }}</td>
+                                                <td class="px-6 py-3 text-center">
+                                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                                                        {{ (proxy.address || proxy).split('://')[0] || 'http' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-3 text-center">
+                                                    <span :class="['px-2 py-1 text-xs rounded',
+                                                        proxy.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700']">
+                                                        {{ proxy.status === 'failed' ? '失败' : '可用' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-3 text-center">
+                                                    <button @click="removeProxy(proxy.address || proxy)"
+                                                        class="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                        title="删除">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="proxyList.length === 0">
+                                                <td colspan="4" class="px-6 py-12 text-center">
+                                                    <i class="ri-global-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                    <p class="text-zinc-500 text-sm">暂无代理，请添加或从文件加载</p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 使用说明 -->
+                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
+                                <h3 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                    <i class="ri-lightbulb-line"></i> 使用说明
+                                </h3>
+                                <div class="text-xs text-blue-800 space-y-2">
+                                    <p><strong>代理格式：</strong>支持 http://、https://、socks5:// 协议，可带认证信息</p>
+                                    <p><strong>文件加载：</strong>代理列表存储在 data/proxies.txt，每行一个</p>
+                                    <p><strong>规则配置：</strong>在规则配置中选择「使用 IP 池」即可自动轮换代理</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- LOGS -->
                         <div v-if="activeTab === 'logs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                <div
+                                    class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
                                     <div>
                                         <h3 class="text-sm font-semibold text-zinc-900">全局日志</h3>
                                         <p class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
@@ -367,57 +960,67 @@
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <select v-model="logFilter" class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                        <select v-model="logFilter"
+                                            class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
                                             <option value="all">所有级别</option>
                                             <option value="info">信息</option>
                                             <option value="warning">警告</option>
                                             <option value="error">错误</option>
                                             <option value="success">成功</option>
                                         </select>
-                                        <button @click="clearLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <button @click="clearLogs"
+                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
                                             <i class="ri-delete-bin-line"></i> 清空
                                         </button>
-                                        <button @click="exportLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <button @click="exportLogs"
+                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
                                             <i class="ri-download-line"></i> 导出
                                         </button>
                                     </div>
                                 </div>
                                 <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
-                                    <div v-for="(log, i) in filteredLogs" :key="i" :class="['log-line', `log-${log.level}`]">
+                                    <div v-for="(log, i) in filteredLogs" :key="i"
+                                        :class="['log-line', `log-${log.level}`]">
                                         <span class="text-zinc-500">[{{ log.timestamp }}]</span>
                                         <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
                                         <span class="ml-2">{{ log.message }}</span>
                                     </div>
-                                    <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示</div>
+                                    <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                <div
+                                    class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
                                     <div>
                                         <h3 class="text-sm font-semibold text-zinc-900">用户日志</h3>
                                         <p class="text-xs text-zinc-500 mt-0.5">仅显示当前筛选用户的日志</p>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <select v-model="logFilter" class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                        <select v-model="logFilter"
+                                            class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
                                             <option value="all">所有级别</option>
                                             <option value="info">信息</option>
                                             <option value="warning">警告</option>
                                             <option value="error">错误</option>
                                             <option value="success">成功</option>
                                         </select>
-                                        <button @click="exportLogs" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <button @click="exportLogs"
+                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
                                             <i class="ri-download-line"></i> 导出
                                         </button>
                                     </div>
                                 </div>
                                 <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
-                                    <div v-for="(log, i) in filteredUserLogs" :key="i" :class="['log-line', `log-${log.level}`]">
+                                    <div v-for="(log, i) in filteredUserLogs" :key="i"
+                                        :class="['log-line', `log-${log.level}`]">
                                         <span class="text-zinc-500">[{{ log.timestamp }}]</span>
                                         <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
                                         <span class="ml-2">{{ log.message }}</span>
                                     </div>
-                                    <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">暂无该用户日志</div>
+                                    <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">
+                                        暂无该用户日志</div>
                                 </div>
                             </div>
                         </div>
@@ -425,12 +1028,15 @@
                         <!-- POOL -->
                         <div v-if="activeTab === 'pool'" class="space-y-6">
                             <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div class="px-6 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50">
+                                <div
+                                    class="px-6 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50">
                                     <div>
                                         <h3 class="text-sm font-semibold text-zinc-900">浏览器实例</h3>
-                                        <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{ browserPoolInfo.available || 0 }} 可用</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{
+                                            browserPoolInfo.available || 0 }} 可用</p>
                                     </div>
-                                    <button @click="restartBrowserPool" class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                    <button @click="restartBrowserPool"
+                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
                                         <i class="ri-restart-line"></i> 重启池
                                     </button>
                                 </div>
@@ -447,13 +1053,16 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-zinc-200 text-zinc-700">
-                                            <tr v-for="inst in browserPoolInfo.instances" :key="inst.id" class="hover:bg-zinc-50 transition-all">
+                                            <tr v-for="inst in browserPoolInfo.instances" :key="inst.id"
+                                                class="hover:bg-zinc-50 transition-all">
                                                 <td class="px-6 py-4 font-mono text-zinc-600">#{{ inst.id }}</td>
                                                 <td class="px-6 py-4 font-mono">{{ inst.pid }}</td>
                                                 <td class="px-6 py-4">
-                                                    <span :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
+                                                    <span
+                                                        :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
                                                         inst.in_use ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700']">
-                                                        <span :class="['w-1.5 h-1.5 rounded-full mr-1.5', inst.in_use ? 'bg-yellow-500' : 'bg-blue-500']"></span>
+                                                        <span
+                                                            :class="['w-1.5 h-1.5 rounded-full mr-1.5', inst.in_use ? 'bg-yellow-500' : 'bg-blue-500']"></span>
                                                         {{ inst.in_use ? '使用中' : '空闲' }}
                                                     </span>
                                                 </td>
@@ -481,31 +1090,38 @@
                                         <h3 class="text-base font-semibold text-zinc-900">缓存统计</h3>
                                         <p class="text-sm text-zinc-500 mt-1">凭证缓存性能指标</p>
                                     </div>
-                                    <button @click="clearAllCache" class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                                    <button @click="clearAllCache"
+                                        class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
                                         <i class="ri-delete-bin-line"></i> 清空全部缓存
                                     </button>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
+                                    <div
+                                        class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
                                         <div class="flex items-center justify-between mb-3">
                                             <div class="text-xs font-semibold text-blue-700">总条目</div>
                                             <i class="ri-database-2-line text-blue-600 text-xl"></i>
                                         </div>
-                                        <div class="text-3xl font-bold text-blue-900">{{ stats.cache?.total || 0 }}</div>
+                                        <div class="text-3xl font-bold text-blue-900">{{ stats.cache?.total || 0 }}
+                                        </div>
                                     </div>
-                                    <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                                    <div
+                                        class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
                                         <div class="flex items-center justify-between mb-3">
                                             <div class="text-xs font-semibold text-green-700">命中率</div>
                                             <i class="ri-speed-up-line text-green-600 text-xl"></i>
                                         </div>
-                                        <div class="text-3xl font-bold text-green-900">{{ stats.cache?.hit_rate || 0 }}%</div>
+                                        <div class="text-3xl font-bold text-green-900">{{ stats.cache?.hit_rate || 0 }}%
+                                        </div>
                                     </div>
-                                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
+                                    <div
+                                        class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
                                         <div class="flex items-center justify-between mb-3">
                                             <div class="text-xs font-semibold text-purple-700">存储大小</div>
                                             <i class="ri-hard-drive-2-line text-purple-600 text-xl"></i>
                                         </div>
-                                        <div class="text-3xl font-bold text-purple-900">{{ formatBytes(stats.cache?.size_bytes || 0) }}</div>
+                                        <div class="text-3xl font-bold text-purple-900">{{
+                                            formatBytes(stats.cache?.size_bytes || 0) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -516,21 +1132,24 @@
                             <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
                                 <h3 class="text-sm font-semibold text-zinc-900 mb-4">配置预设</h3>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <button @click="applyPreset('development')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
+                                    <button @click="applyPreset('development')"
+                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
                                         <div class="flex items-center gap-3 mb-2">
                                             <i class="ri-code-s-slash-line text-2xl text-blue-600"></i>
                                             <div class="text-sm font-semibold text-zinc-900">开发环境</div>
                                         </div>
                                         <p class="text-xs text-zinc-500">最小池，快速回收</p>
                                     </button>
-                                    <button @click="applyPreset('production')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left">
+                                    <button @click="applyPreset('production')"
+                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left">
                                         <div class="flex items-center gap-3 mb-2">
                                             <i class="ri-rocket-line text-2xl text-green-600"></i>
                                             <div class="text-sm font-semibold text-zinc-900">生产环境</div>
                                         </div>
                                         <p class="text-xs text-zinc-500">高流量优化</p>
                                     </button>
-                                    <button @click="applyPreset('conservative')" class="p-4 border-2 border-zinc-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
+                                    <button @click="applyPreset('conservative')"
+                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
                                         <div class="flex items-center gap-3 mb-2">
                                             <i class="ri-shield-check-line text-2xl text-purple-600"></i>
                                             <div class="text-sm font-semibold text-zinc-900">保守模式</div>
@@ -574,7 +1193,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
                                 <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
                                     <h3 class="text-base font-semibold text-zinc-900">过盾策略</h3>
@@ -582,7 +1200,8 @@
                                 </div>
                                 <div class="p-6 grid gap-6">
                                     <div>
-                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">Token 有效期 (秒)</label>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">Token 有效期
+                                            (秒)</label>
                                         <input type="number" v-model.number="config.cookie_expire_seconds"
                                             class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
                                         <p class="text-xs text-zinc-500 mt-2">Cloudflare token 被视为有效的时长</p>
@@ -600,7 +1219,8 @@
                             </div>
 
                             <div class="flex justify-end gap-3 pt-4">
-                                <button @click="exportConfig" class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
+                                <button @click="exportConfig"
+                                    class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
                                     <i class="ri-download-line"></i> 导出 JSON
                                 </button>
                                 <button @click="saveConfig" :disabled="saving"
@@ -631,16 +1251,21 @@
                                         <span>{{ testing ? '测试中...' : '检查' }}</span>
                                     </button>
                                 </div>
-                                <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg space-y-3">
+                                <div v-if="testResult"
+                                    class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg space-y-3">
                                     <div class="flex justify-between items-center">
-                                        <span :class="['font-bold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
-                                            <i :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
+                                        <span
+                                            :class="['font-bold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
+                                            <i
+                                                :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
                                             {{ testResult.success ? '通过' : '失败' }}
                                         </span>
-                                        <span class="font-mono text-zinc-600 text-xs">{{ testResult.duration_ms }}ms</span>
+                                        <span class="font-mono text-zinc-600 text-xs">{{ testResult.duration_ms
+                                            }}ms</span>
                                     </div>
 
-                                    <div v-if="testResult.error" class="text-xs text-red-600 break-all p-2 bg-red-50 rounded border border-red-200">
+                                    <div v-if="testResult.error"
+                                        class="text-xs text-red-600 break-all p-2 bg-red-50 rounded border border-red-200">
                                         <div class="font-semibold mb-1">错误信息：</div>
                                         {{ testResult.error }}
                                     </div>
@@ -648,18 +1273,25 @@
                                     <div v-if="testResult.success" class="space-y-2">
                                         <div class="text-xs">
                                             <span class="font-semibold text-zinc-700">User Agent:</span>
-                                            <div class="mt-1 p-2 bg-white border border-zinc-200 rounded text-zinc-600 break-all">
+                                            <div
+                                                class="mt-1 p-2 bg-white border border-zinc-200 rounded text-zinc-600 break-all">
                                                 {{ testResult.ua || 'N/A' }}
                                             </div>
                                         </div>
                                         <div class="text-xs">
-                                            <span class="font-semibold text-zinc-700">Cookies ({{ testResult.cookies_count || 0 }}):</span>
-                                            <div class="mt-1 p-3 bg-white border border-zinc-200 rounded max-h-64 overflow-y-auto space-y-2">
-                                                <div v-for="(value, name) in testResult.cookies" :key="name" class="p-2 bg-zinc-50 border border-zinc-200 rounded">
-                                                    <div class="font-mono text-xs font-semibold text-blue-600 mb-1">{{ name }}</div>
-                                                    <div class="font-mono text-[11px] text-zinc-700 break-all">{{ value }}</div>
+                                            <span class="font-semibold text-zinc-700">Cookies ({{
+                                                testResult.cookies_count || 0 }}):</span>
+                                            <div
+                                                class="mt-1 p-3 bg-white border border-zinc-200 rounded max-h-64 overflow-y-auto space-y-2">
+                                                <div v-for="(value, name) in testResult.cookies" :key="name"
+                                                    class="p-2 bg-zinc-50 border border-zinc-200 rounded">
+                                                    <div class="font-mono text-xs font-semibold text-blue-600 mb-1">{{
+                                                        name }}</div>
+                                                    <div class="font-mono text-[11px] text-zinc-700 break-all">{{ value
+                                                        }}</div>
                                                 </div>
-                                                <div v-if="!testResult.cookies || Object.keys(testResult.cookies).length === 0" class="text-zinc-500 text-center py-4">无 cookies</div>
+                                                <div v-if="!testResult.cookies || Object.keys(testResult.cookies).length === 0"
+                                                    class="text-zinc-500 text-center py-4">无 cookies</div>
                                             </div>
                                         </div>
                                     </div>
@@ -673,22 +1305,22 @@
                                 <textarea v-model="batchTestUrls"
                                     class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none mb-4 h-36 resize-none font-mono placeholder-zinc-400"
                                     placeholder="每行一个 URL...&#10;https://example1.com&#10;https://example2.com"></textarea>
-                                    <div class="flex justify-between items-center">
-                                        <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
-                                            <i class="ri-checkbox-circle-fill text-green-500"></i>
-                                            {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
-                                        </span>
-                                        <div class="flex items-center gap-3 ml-auto">
-                                            <div v-if="batchTesting" class="text-xs text-zinc-500 flex items-center gap-2">
-                                                <span class="loader w-4 h-4"></span> {{ batchProgress }}%
-                                            </div>
-                                            <button @click="batchTestBypass" :disabled="batchTesting"
-                                                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
-                                                <i v-if="!batchTesting" class="ri-play-list-line"></i>
-                                                <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
-                                            </button>
+                                <div class="flex justify-between items-center">
+                                    <span v-if="batchTestResults" class="text-xs text-zinc-600 flex items-center gap-2">
+                                        <i class="ri-checkbox-circle-fill text-green-500"></i>
+                                        {{ batchTestResults.success }}/{{ batchTestResults.total }} 通过
+                                    </span>
+                                    <div class="flex items-center gap-3 ml-auto">
+                                        <div v-if="batchTesting" class="text-xs text-zinc-500 flex items-center gap-2">
+                                            <span class="loader w-4 h-4"></span> {{ batchProgress }}%
                                         </div>
+                                        <button @click="batchTestBypass" :disabled="batchTesting"
+                                            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                            <i v-if="!batchTesting" class="ri-play-list-line"></i>
+                                            <span>{{ batchTesting ? '运行中...' : '运行批量' }}</span>
+                                        </button>
                                     </div>
+                                </div>
                             </div>
 
                             <div class="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
@@ -699,32 +1331,40 @@
                                     <div>
                                         <div class="flex items-center justify-between mb-3">
                                             <span class="text-sm font-medium text-zinc-700">CPU 使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.cpu?.percent || 0 }}%</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
+                                                systemInfo.cpu?.percent || 0 }}%</span>
                                         </div>
                                         <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.cpu?.percent || 0) + '%'}"></div>
+                                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
+                                                :style="{width: (systemInfo.cpu?.percent || 0) + '%'}"></div>
                                         </div>
                                         <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.cpu?.cores || 0 }} 核心可用</p>
                                     </div>
                                     <div>
                                         <div class="flex items-center justify-between mb-3">
                                             <span class="text-sm font-medium text-zinc-700">内存使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.memory?.percent || 0 }}%</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
+                                                systemInfo.memory?.percent || 0 }}%</span>
                                         </div>
                                         <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.memory?.percent || 0) + '%'}"></div>
+                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                                                :style="{width: (systemInfo.memory?.percent || 0) + '%'}"></div>
                                         </div>
-                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.memory?.used_gb || 0 }} / {{ systemInfo.memory?.total_gb || 0 }} GB</p>
+                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.memory?.used_gb || 0 }} / {{
+                                            systemInfo.memory?.total_gb || 0 }} GB</p>
                                     </div>
                                     <div>
                                         <div class="flex items-center justify-between mb-3">
                                             <span class="text-sm font-medium text-zinc-700">磁盘使用率</span>
-                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{ systemInfo.disk?.percent || 0 }}%</span>
+                                            <span class="text-sm font-mono font-semibold text-zinc-900">{{
+                                                systemInfo.disk?.percent || 0 }}%</span>
                                         </div>
                                         <div class="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500" :style="{width: (systemInfo.disk?.percent || 0) + '%'}"></div>
+                                            <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
+                                                :style="{width: (systemInfo.disk?.percent || 0) + '%'}"></div>
                                         </div>
-                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.disk?.used_gb || 0 }} / {{ systemInfo.disk?.total_gb || 0 }} GB</p>
+                                        <p class="text-xs text-zinc-500 mt-2">{{ systemInfo.disk?.used_gb || 0 }} / {{
+                                            systemInfo.disk?.total_gb || 0 }} GB</p>
                                     </div>
                                 </div>
                             </div>
@@ -736,11 +1376,14 @@
         </template>
 
         <!-- Detail Modal -->
-        <div v-if="selectedRequest" @click="selectedRequest = null" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div @click.stop class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div v-if="selectedRequest" @click="selectedRequest = null"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div @click.stop
+                class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
                     <h3 class="text-base font-semibold text-zinc-900">请求详情</h3>
-                    <button @click="selectedRequest = null" class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
+                    <button @click="selectedRequest = null"
+                        class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
                         <i class="ri-close-line text-xl"></i>
                     </button>
                 </div>
@@ -749,26 +1392,30 @@
                         <label class="text-xs font-semibold text-zinc-600 uppercase">状态</label>
                         <div :class="['mt-2 inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold',
                             selectedRequest.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
-                            <i :class="selectedRequest.success ? 'ri-checkbox-circle-fill mr-2' : 'ri-close-circle-fill mr-2'"></i>
+                            <i
+                                :class="selectedRequest.success ? 'ri-checkbox-circle-fill mr-2' : 'ri-close-circle-fill mr-2'"></i>
                             {{ selectedRequest.success ? '成功' : '失败' }}
                         </div>
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-zinc-600 uppercase">URL</label>
-                        <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900 break-all">
+                        <div
+                            class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900 break-all">
                             {{ selectedRequest.url }}
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-xs font-semibold text-zinc-600 uppercase">耗时</label>
-                            <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                            <div
+                                class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
                                 {{ selectedRequest.duration_ms }}ms
                             </div>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-zinc-600 uppercase">时间戳</label>
-                            <div class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                            <div
+                                class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
                                 {{ selectedRequest.timestamp }}
                             </div>
                         </div>
@@ -789,7 +1436,8 @@
                 toast.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
                 toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
                 'bg-blue-50 text-blue-700 border-blue-200']">
-                <i :class="toast.type === 'success' ? 'ri-checkbox-circle-fill text-xl' : toast.type === 'error' ? 'ri-error-warning-fill text-xl' : 'ri-information-fill text-xl'"></i>
+                <i
+                    :class="toast.type === 'success' ? 'ri-checkbox-circle-fill text-xl' : toast.type === 'error' ? 'ri-error-warning-fill text-xl' : 'ri-information-fill text-xl'"></i>
                 {{ toast.message }}
             </div>
         </div>
@@ -822,7 +1470,7 @@
                         y: 30 - (item.success_rate / 100) * 25
                     }));
                 });
-                const path = computed(() => points.value.length < 2 ? '' : points.value.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' '));
+                const path = computed(() => points.value.length < 2 ? '' : points.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
                 const fillPath = computed(() => path.value ? `${path.value} L 100 30 L 0 30 Z` : '');
                 return { path, fillPath, points };
             }
@@ -884,6 +1532,8 @@
 
                 const tabs = [
                     { id: 'monitor', name: '总览', icon: 'ri-dashboard-3-line', desc: '实时监控和数据分析' },
+                    { id: 'rules', name: '规则配置', icon: 'ri-magic-line', desc: '创建和管理采集规则' },
+                    { id: 'proxies', name: '代理管理', icon: 'ri-global-line', desc: '管理 IP 池和代理列表' },
                     { id: 'logs', name: '日志', icon: 'ri-file-list-3-line', desc: '系统日志和活动' },
                     { id: 'pool', name: '实例池', icon: 'ri-cpu-line', desc: '浏览器池管理' },
                     { id: 'cache', name: '缓存', icon: 'ri-database-2-line', desc: '缓存统计' },
@@ -899,13 +1549,49 @@
                 const userLoading = ref(false), rotatingUser = ref('');
                 const toast = reactive({ show: false, message: '', type: 'success' }), logs = reactive([]);
                 const userLogs = reactive([]);
+
+                // 规则配置相关状态
+                const rules = reactive([]);
+                const rulesLoading = ref(false);
+                const showRuleForm = ref(false);
+                const editingRule = ref(null);
+                const ruleForm = reactive({
+                    name: '',
+                    target_url: '',
+                    method: 'GET',
+                    mode: 'cookie',
+                    selectors: [],
+                    wait_for: '',
+                    // 接口与格式
+                    api_type: 'proxy',
+                    headers_list: [],
+                    body: '',
+                    body_type: 'none',
+                    // 访问控制
+                    is_public: false,
+                    // 代理配置
+                    proxy_mode: 'none',
+                    proxy: '',
+                    // 缓存
+                    cache_ttl: 0
+                });
+                const ruleTestResult = ref(null);
+                const ruleTesting = ref(false);
+                const copiedRuleId = ref(null);
+
+                // 代理管理相关状态
+                const proxyList = reactive([]);
+                const proxyStats = reactive({ total: 0, available: 0, strategy: 'round_robin' });
+                const proxyLoading = ref(false);
+                const newProxyText = ref('');
+
                 let refreshInterval = null, lastErrorToast = 0, errorMuteUntil = 0, eventSource = null, logEventSource = null;
 
                 const requestDistribution = computed(() => {
                     const t = stats.requests?.total || 0, s = stats.requests?.success || 0, f = stats.requests?.failed || 0;
                     return [
-                        { label: '成功', value: s, percentage: t > 0 ? Math.round(s/t*100) : 0, color: '#10b981' },
-                        { label: '失败', value: f, percentage: t > 0 ? Math.round(f/t*100) : 0, color: '#ef4444' },
+                        { label: '成功', value: s, percentage: t > 0 ? Math.round(s / t * 100) : 0, color: '#10b981' },
+                        { label: '失败', value: f, percentage: t > 0 ? Math.round(f / t * 100) : 0, color: '#ef4444' },
                     ];
                 });
 
@@ -948,7 +1634,7 @@
 
                 const muteErrors = (ms = 60000) => {
                     errorMuteUntil = Date.now() + ms;
-                    showToast(`错误提示已静音 ${ms/1000} 秒`, 'info');
+                    showToast(`错误提示已静音 ${ms / 1000} 秒`, 'info');
                 };
 
                 const buildUrl = (path) => {
@@ -984,7 +1670,7 @@
                         const userParam = requestUserFilter.value !== 'all' ? `&user=${encodeURIComponent(requestUserFilter.value)}` : '';
                         const [s, st, c, ts, h, sys, bp, l] = await Promise.all([
                             api('/status'), api('/stats'), api('/config'), api('/time-series'),
-                            api(`/history${requestUserFilter.value !== 'all' ? '?user='+requestUserFilter.value : ''}`), api('/system'), api('/browser-pool'), api(`/logs?limit=200${userParam}`)
+                            api(`/history${requestUserFilter.value !== 'all' ? '?user=' + requestUserFilter.value : ''}`), api('/system'), api('/browser-pool'), api(`/logs?limit=200${userParam}`)
                         ]);
                         Object.assign(status, s); Object.assign(stats, st); Object.assign(config, c);
                         timeSeries.splice(0, timeSeries.length, ...ts);
@@ -992,6 +1678,7 @@
                         Object.assign(systemInfo, sys); Object.assign(browserPoolInfo, bp);
                         logs.splice(0, logs.length, ...(l.all || []));
                         userLogs.splice(0, userLogs.length, ...(l.user || []));
+
                         if (isAdmin.value) await loadUsers();
                     } catch (e) {
                         if (e.message.includes('401')) {
@@ -1207,6 +1894,233 @@
                     finally { rotatingUser.value = ''; }
                 };
 
+                // ========== 规则管理函数 ==========
+                const rulesApi = async (path, opts = {}, timeoutMs = 10000) => {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), timeoutMs);
+                    try {
+                        const res = await fetch(buildUrl(`/v1${path}`), {
+                            ...opts,
+                            signal: controller.signal,
+                            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
+                        });
+                        if (!res.ok) {
+                            const text = await res.text();
+                            throw new Error(text || `请求失败 (${res.status})`);
+                        }
+                        return res.json();
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw new Error('请求超时');
+                        throw e;
+                    } finally {
+                        clearTimeout(timer);
+                    }
+                };
+
+                const loadRules = async () => {
+                    rulesLoading.value = true;
+                    try {
+                        const res = await rulesApi('/rules');
+                        rules.splice(0, rules.length, ...(res.rules || []));
+                    } catch (e) { notifyError(e.message || '获取规则列表失败'); }
+                    finally { rulesLoading.value = false; }
+                };
+
+                const resetRuleForm = () => {
+                    ruleForm.name = '';
+                    ruleForm.target_url = '';
+                    ruleForm.method = 'GET';
+                    ruleForm.mode = 'cookie';
+                    ruleForm.selectors = [];
+                    ruleForm.wait_for = '';
+                    ruleForm.api_type = 'proxy';
+                    ruleForm.headers_list = [];
+                    ruleForm.body = '';
+                    ruleForm.body_type = 'none';
+                    ruleForm.is_public = false;
+                    ruleForm.proxy_mode = 'none';
+                    ruleForm.proxy = '';
+                    ruleForm.cache_ttl = 0;
+                    editingRule.value = null;
+                    ruleTestResult.value = null;
+                };
+
+                const openRuleForm = (rule = null) => {
+                    resetRuleForm();
+                    if (rule) {
+                        editingRule.value = rule.id;
+                        ruleForm.name = rule.name || '';
+                        ruleForm.target_url = rule.target_url || '';
+                        ruleForm.method = rule.method || 'GET';
+                        ruleForm.mode = rule.mode || 'cookie';
+                        ruleForm.selectors = Object.entries(rule.selectors || {}).map(([k, v]) => ({ key: k, selector: v }));
+                        ruleForm.wait_for = rule.wait_for || '';
+                        ruleForm.api_type = rule.api_type || 'proxy';
+                        ruleForm.headers_list = Object.entries(rule.headers || {}).map(([k, v]) => ({ key: k, value: v }));
+                        ruleForm.body = rule.body || '';
+                        ruleForm.body_type = rule.body_type || 'none';
+                        ruleForm.is_public = rule.is_public || false;
+                        ruleForm.proxy_mode = rule.proxy_mode || 'none';
+                        ruleForm.proxy = rule.proxy || '';
+                        ruleForm.cache_ttl = rule.cache_ttl || 0;
+                    }
+                    showRuleForm.value = true;
+                };
+
+                const addSelector = () => {
+                    ruleForm.selectors.push({ key: '', selector: '' });
+                };
+
+                const removeSelector = (index) => {
+                    ruleForm.selectors.splice(index, 1);
+                };
+
+                const addHeader = () => {
+                    ruleForm.headers_list.push({ key: '', value: '' });
+                };
+
+                const removeHeader = (index) => {
+                    ruleForm.headers_list.splice(index, 1);
+                };
+
+                const saveRule = async () => {
+                    if (!ruleForm.target_url.trim()) {
+                        showToast('请输入目标 URL', 'error');
+                        return;
+                    }
+                    rulesLoading.value = true;
+                    try {
+                        const selectors = {};
+                        ruleForm.selectors.forEach(s => {
+                            if (s.key.trim() && s.selector.trim()) {
+                                selectors[s.key.trim()] = s.selector.trim();
+                            }
+                        });
+                        const headers = {};
+                        ruleForm.headers_list.forEach(h => {
+                            if (h.key.trim() && h.value.trim()) {
+                                headers[h.key.trim()] = h.value.trim();
+                            }
+                        });
+                        const payload = {
+                            name: ruleForm.name.trim() || '未命名规则',
+                            target_url: ruleForm.target_url.trim(),
+                            method: ruleForm.method,
+                            mode: ruleForm.mode,
+                            selectors: selectors,
+                            wait_for: ruleForm.wait_for.trim() || null,
+                            api_type: ruleForm.api_type,
+                            headers: headers,
+                            body: ruleForm.body.trim() || null,
+                            body_type: ruleForm.body_type,
+                            is_public: ruleForm.is_public,
+                            proxy_mode: ruleForm.proxy_mode,
+                            proxy: ruleForm.proxy_mode === 'fixed' ? ruleForm.proxy.trim() : null,
+                            cache_ttl: ruleForm.cache_ttl
+                        };
+                        if (editingRule.value) {
+                            payload.id = editingRule.value;
+                        }
+                        const res = await rulesApi('/rules', { method: 'POST', body: JSON.stringify(payload) });
+                        showToast(`规则已${editingRule.value ? '更新' : '创建'}，Permlink: /v1/run/${res.id}`, 'success');
+                        showRuleForm.value = false;
+                        resetRuleForm();
+                        await loadRules();
+                    } catch (e) { notifyError(e.message || '保存规则失败'); }
+                    finally { rulesLoading.value = false; }
+                };
+
+                const deleteRule = async (rule) => {
+                    if (!confirm(`确定删除规则 "${rule.name}"?`)) return;
+                    try {
+                        await rulesApi(`/rules/${rule.id}`, { method: 'DELETE' });
+                        const idx = rules.findIndex(r => r.id === rule.id);
+                        if (idx >= 0) rules.splice(idx, 1);
+                        showToast('规则已删除', 'success');
+                    } catch (e) { notifyError(e.message || '删除规则失败'); }
+                };
+
+                const testRule = async (rule) => {
+                    ruleTesting.value = true;
+                    ruleTestResult.value = null;
+                    try {
+                        const res = await fetch(buildUrl(`/v1/run/${rule.id}`), {
+                            headers: { 'X-API-KEY': apiKey.value }
+                        });
+                        ruleTestResult.value = await res.json();
+                        showToast('规则测试完成', 'success');
+                    } catch (e) {
+                        ruleTestResult.value = { error: e.message };
+                        showToast('规则测试失败', 'error');
+                    } finally { ruleTesting.value = false; }
+                };
+
+                const copyPermlink = async (rule) => {
+                    const url = `${apiBaseUrl.value || window.location.origin}/v1/run/${rule.id}`;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        copiedRuleId.value = rule.id;
+                        showToast('Permlink 已复制到剪贴板', 'success');
+                        setTimeout(() => { copiedRuleId.value = null; }, 2000);
+                    } catch (e) {
+                        showToast('复制失败，请手动复制', 'error');
+                    }
+                };
+
+                const formatRuleTime = (timestamp) => {
+                    if (!timestamp) return '-';
+                    const d = new Date(timestamp * 1000);
+                    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                };
+
+                // ========== 代理管理函数 ==========
+                const loadProxies = async () => {
+                    proxyLoading.value = true;
+                    try {
+                        const res = await api('/proxies');
+                        proxyList.splice(0, proxyList.length, ...(res.proxies || []));
+                        proxyStats.total = res.total || 0;
+                        proxyStats.available = res.available || 0;
+                        proxyStats.strategy = res.strategy || 'round_robin';
+                    } catch (e) { notifyError(e.message || '获取代理列表失败'); }
+                    finally { proxyLoading.value = false; }
+                };
+
+                const addProxies = async () => {
+                    const lines = newProxyText.value.trim().split('\n').filter(l => l.trim());
+                    if (lines.length === 0) {
+                        showToast('请输入代理地址', 'error');
+                        return;
+                    }
+                    proxyLoading.value = true;
+                    try {
+                        await api('/proxies', { method: 'POST', body: JSON.stringify({ proxies: lines }) });
+                        showToast(`已添加 ${lines.length} 个代理`, 'success');
+                        newProxyText.value = '';
+                        await loadProxies();
+                    } catch (e) { notifyError(e.message || '添加代理失败'); }
+                    finally { proxyLoading.value = false; }
+                };
+
+                const removeProxy = async (proxy) => {
+                    try {
+                        await api('/proxies', { method: 'DELETE', body: JSON.stringify({ proxy }) });
+                        const idx = proxyList.findIndex(p => p.address === proxy);
+                        if (idx >= 0) proxyList.splice(idx, 1);
+                        showToast('代理已删除', 'success');
+                    } catch (e) { notifyError(e.message || '删除代理失败'); }
+                };
+
+                const reloadProxies = async () => {
+                    proxyLoading.value = true;
+                    try {
+                        await api('/proxies/reload', { method: 'POST' });
+                        showToast('代理列表已重新加载', 'success');
+                        await loadProxies();
+                    } catch (e) { notifyError(e.message || '重新加载失败'); }
+                    finally { proxyLoading.value = false; }
+                };
+
                 const saveConfig = async () => {
                     saving.value = true;
                     try {
@@ -1217,21 +2131,21 @@
                 };
 
                 const clearAllCache = async () => {
-                    if(!confirm('确定要清空所有缓存吗？')) return;
+                    if (!confirm('确定要清空所有缓存吗？')) return;
                     try {
                         await api('/cache/clear', { method: 'POST' });
                         showToast('缓存清空成功', 'success');
                         loadData();
-                    } catch(e){ showToast(e.message,'error'); }
+                    } catch (e) { showToast(e.message, 'error'); }
                 };
 
                 const restartBrowserPool = async () => {
-                    if(!confirm('确定要重启浏览器池吗？')) return;
+                    if (!confirm('确定要重启浏览器池吗？')) return;
                     try {
                         await api('/browser-pool/restart', { method: 'POST' });
                         showToast('浏览器池重启中...', 'info');
                         setTimeout(loadData, 2000);
-                    } catch(e){ showToast(e.message,'error'); }
+                    } catch (e) { showToast(e.message, 'error'); }
                 };
 
                 const testBypass = async () => {
@@ -1239,43 +2153,43 @@
                     try {
                         testResult.value = await api('/test', { method: 'POST', body: JSON.stringify({ url: testUrl.value }) }, 60000);
                         showToast(testResult.value.success ? '测试通过！' : '测试失败', testResult.value.success ? 'success' : 'error');
-                    } catch(e){
-                        testResult.value={success:false, error:e.message};
+                    } catch (e) {
+                        testResult.value = { success: false, error: e.message };
                         showToast('测试失败', 'error');
-                    } finally { testing.value=false; }
+                    } finally { testing.value = false; }
                 };
 
                 const batchTestBypass = async () => {
-                    const urls = batchTestUrls.value.split('\n').filter(u=>u.trim());
-                    if(!urls.length) { showToast('请至少输入一个 URL', 'error'); return; }
-                    batchTesting.value=true; batchProgress.value = 0;
+                    const urls = batchTestUrls.value.split('\n').filter(u => u.trim());
+                    if (!urls.length) { showToast('请至少输入一个 URL', 'error'); return; }
+                    batchTesting.value = true; batchProgress.value = 0;
                     try {
                         // 分批次处理，前端分片，避免单次过长
                         const chunkSize = 3;
                         const allResults = [];
-                        for (let i=0; i<urls.length; i+=chunkSize) {
-                            const chunk = urls.slice(i, i+chunkSize);
-                            const res = await api('/test/batch', { method:'POST', body:JSON.stringify({urls: chunk}) }, 60000);
+                        for (let i = 0; i < urls.length; i += chunkSize) {
+                            const chunk = urls.slice(i, i + chunkSize);
+                            const res = await api('/test/batch', { method: 'POST', body: JSON.stringify({ urls: chunk }) }, 60000);
                             allResults.push(...res.results);
-                            batchProgress.value = Math.round(((i+chunk.length)/urls.length)*100);
+                            batchProgress.value = Math.round(((i + chunk.length) / urls.length) * 100);
                         }
-                        const success = allResults.filter(r=>r.success).length;
+                        const success = allResults.filter(r => r.success).length;
                         batchTestResults.value = { total: allResults.length, success, failed: allResults.length - success, results: allResults };
                         showToast(`批量测试完成: ${batchTestResults.value.success}/${batchTestResults.value.total} 通过`, 'success');
-                    } catch(e){ showToast(e.message,'error'); }
-                    finally { batchTesting.value=false; }
+                    } catch (e) { showToast(e.message, 'error'); }
+                    finally { batchTesting.value = false; }
                 };
 
                 const exportConfig = () => {
                     const a = document.createElement('a');
-                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config,null,2));
+                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
                     a.download = "gateway-config.json"; a.click();
                     showToast('配置已导出', 'success');
                 };
 
                 const exportRequests = () => {
                     const csv = [['状态', 'URL', '延迟 (ms)', '时间戳'],
-                        ...requestHistory.map(r => [r.success ? '成功' : '失败', r.url, r.duration_ms, r.timestamp])
+                    ...requestHistory.map(r => [r.success ? '成功' : '失败', r.url, r.duration_ms, r.timestamp])
                     ].map(row => row.join(',')).join('\n');
                     const a = document.createElement('a');
                     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
@@ -1292,7 +2206,7 @@
                 };
 
                 const clearLogs = () => {
-                    if(!confirm('确定要清空所有日志吗？')) return;
+                    if (!confirm('确定要清空所有日志吗？')) return;
                     logs.splice(0, logs.length);
                     showToast('日志已清空', 'success');
                 };
@@ -1322,6 +2236,14 @@
                         connectLogStream();
                     } else {
                         closeLogStream();
+                    }
+                    // 切换到规则页面时加载规则列表
+                    if (newTab === 'rules') {
+                        loadRules();
+                    }
+                    // 切换到代理页面时加载代理列表
+                    if (newTab === 'proxies') {
+                        loadProxies();
                     }
                 });
 
@@ -1354,8 +2276,14 @@
                 return {
                     authenticated, apiKey, apiBaseUrl, autoRefresh, sseConnected, loading, loginError, activeTab, tabs, visibleTabs, currentTabName, currentTabDesc,
                     status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo, requestUserFilter, userOptions, apiUsers, isAdmin,
-                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults, newUserName, newUserRole, userLoading, rotatingUser,
+                    toast, saving, testing, testUrl, testResult, batchTesting, batchTestUrls, batchTestResults, batchProgress, newUserName, newUserRole, userLoading, rotatingUser,
                     selectedRequest, searchQuery, logs, userLogs, logFilter, filteredLogs, filteredUserLogs, requestDistribution, filteredRequests,
+                    // 规则配置相关
+                    rules, rulesLoading, showRuleForm, editingRule, ruleForm, ruleTestResult, ruleTesting, copiedRuleId,
+                    loadRules, openRuleForm, saveRule, deleteRule, testRule, copyPermlink, addSelector, removeSelector, addHeader, removeHeader, formatRuleTime,
+                    // 代理管理相关
+                    proxyList, proxyStats, proxyLoading, newProxyText,
+                    loadProxies, addProxies, removeProxy, reloadProxies,
                     login, logout, switchTab, loadData, showRequestDetail: (r) => selectedRequest.value = r,
                     exportRequests, exportLogs, clearLogs, clearAllCache, restartBrowserPool,
                     testBypass, batchTestBypass, exportConfig, applyPreset, saveConfig, formatBytes,
@@ -1366,4 +2294,5 @@
         }).component('line-chart', LineChart).component('donut-chart', DonutChart).mount('#app');
     </script>
 </body>
+
 </html>

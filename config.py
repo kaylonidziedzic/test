@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # 指纹随机化配置
     FINGERPRINT_ENABLED: bool = True  # 是否启用 Canvas/WebGL 指纹随机化
 
+    # 代理配置
+    PROXIES: list = []  # 代理列表 (from data/proxies.txt or env)
+    PROXY_STRATEGY: str = "random"  # 代理策略: "random", "sticky_session" (未来扩展)
+    PROXIES_FILE: str = "data/proxies.txt"
+
+    # Redis 配置 (异步任务队列)
+    REDIS_URL: str = "redis://localhost:6379"  # docker-compose override 会覆盖此项
+
     # 浏览器池配置
     BROWSER_POOL_MIN: int = 1  # 最小浏览器数量
     BROWSER_POOL_MAX: int = 3  # 最大浏览器数量

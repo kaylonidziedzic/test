@@ -13,8 +13,9 @@ from fastapi.responses import FileResponse
 
 from config import settings
 from core.browser_pool import browser_pool
-from routers import dashboard, health, proxy, raw, reader
+from routers import dashboard, health, proxy, raw, reader, job, runner
 from services.cache_service import credential_cache
+
 from utils.logger import log
 
 
@@ -81,7 +82,10 @@ app.include_router(health.router)
 app.include_router(proxy.router)
 app.include_router(raw.router)
 app.include_router(reader.router)
+app.include_router(job.router)
+app.include_router(runner.router)
 app.include_router(dashboard.router)
+
 
 # 静态文件和 Dashboard 入口
 app.mount("/static", StaticFiles(directory="static"), name="static")

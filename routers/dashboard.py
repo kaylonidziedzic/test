@@ -17,6 +17,8 @@ from core.browser_pool import browser_pool
 from dependencies import verify_admin_flexible, verify_api_key, verify_query_key, verify_admin
 from services import api_key_store
 from services.cache_service import credential_cache
+from services.cache_service import credential_cache
+from services.proxy_manager import proxy_manager
 from utils.logger import log
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"], dependencies=[Depends(verify_admin_flexible)])
@@ -302,6 +304,21 @@ def restart_browser_pool() -> Dict[str, Any]:
     browser_pool.shutdown()
     log.info("[Dashboard] 浏览器池已重启")
     return {"message": "浏览器池已重启，下次请求时将重新初始化"}
+
+
+@router.post("/proxies/reload", dependencies=[Depends(verify_api_key)])
+def reload_proxies() -> Dict[str, Any]:
+    """重载代理列表"""
+    proxy_manager.reload()
+    proxies = proxy_manager.get_all()
+    return {"message": f"已重载代理列表，当前共有 {len(proxies)} 个代理", "count": len(proxies)}
+
+
+@router.get("/proxies", dependencies=[Depends(verify_api_key)])
+def get_proxies() -> Dict[str, Any]:
+    """获取当前代理列表"""
+    return {"proxies": proxy_manager.get_all(), "count": len(proxy_manager.get_all())}
+
 
 
 class TestRequest(BaseModel):

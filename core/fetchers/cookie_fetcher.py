@@ -29,6 +29,7 @@ from curl_cffi import requests as curl_requests
 from .base import BaseFetcher, FetchResponse
 from core.solver import solve_turnstile
 from services.cache_service import credential_cache
+from services.proxy_manager import proxy_manager
 from utils.logger import log
 
 
@@ -66,6 +67,7 @@ class CookieFetcher(BaseFetcher):
         data: Optional[Dict[str, Any]] = None,
         json: Optional[Dict[str, Any]] = None,
         data_encoding: Optional[str] = None,
+        proxy: Optional[str] = None,
         **kwargs
     ) -> FetchResponse:
         """使用 Cookie 复用方式获取页面"""
@@ -80,7 +82,12 @@ class CookieFetcher(BaseFetcher):
             # 2. 构造安全的请求头
             safe_headers = self._build_safe_headers(headers, creds["ua"], url, method)
 
-            # 3. 发起请求
+            # 3. 获取代理 (优先使用指定代理)
+            use_proxy = proxy or proxy_manager.get_proxy()
+            if use_proxy:
+                log.info(f"[{self.name}] 使用代理: {use_proxy}")
+
+            # 4. 发起请求
             log.info(f"[{self.name}] 发起请求: {url} (尝试 {attempt + 1}/{self.retries + 1})")
 
             try:
@@ -92,9 +99,10 @@ class CookieFetcher(BaseFetcher):
                     data=data,
                     json=json,
                     data_encoding=data_encoding,
+                    proxy=use_proxy,
                 )
 
-                # 4. 检查是否被拦截
+                # 5. 检查是否被拦截
                 if self._is_blocked(resp):
                     if attempt < self.retries:
                         log.warning(f"[{self.name}] 被拦截，刷新缓存重试...")
@@ -155,6 +163,7 @@ class CookieFetcher(BaseFetcher):
         data: Optional[Dict[str, Any]],
         json: Optional[Dict[str, Any]],
         data_encoding: Optional[str] = None,
+        proxy: Optional[str] = None,
     ) -> FetchResponse:
         """执行实际的 HTTP 请求"""
         # 处理 data 编码（如 GBK）
@@ -185,6 +194,9 @@ class CookieFetcher(BaseFetcher):
             "timeout": self.timeout,
             "allow_redirects": True,
         }
+
+        if proxy:
+            request_kwargs["proxies"] = {"http": proxy, "https": proxy}
 
         # 方案3: 如果指定了 impersonate，添加到请求参数
         if self.impersonate:

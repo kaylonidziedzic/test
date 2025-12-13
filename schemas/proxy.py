@@ -12,4 +12,6 @@ class ProxyRequest(BaseModel):
     headers: Dict[str, str] = {}
     data: Optional[Dict[str, Any]] = None
     json_body: Optional[Dict[str, Any]] = None
+    json_body: Optional[Dict[str, Any]] = None
     data_encoding: Optional[str] = None  # POST data 编码，如 "gbk"、"gb2312"，默认 UTF-8
+    proxy: Optional[str] = None  # 指定使用的代理 (http/socks5)

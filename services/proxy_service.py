@@ -145,9 +145,10 @@ def proxy_request(
 
     # 选择 Fetcher
     if fetcher:
-        # 显式指定，不自动降级
+        # 显式指定 fetcher
         selected_fetcher = get_fetcher(fetcher)
-        use_fallback = False
+        # cookie 模式仍支持自动降级，browser 模式不降级
+        use_fallback = auto_fallback and fetcher == "cookie"
     elif _should_use_browser(hostname):
         # 域名白名单匹配，直接使用浏览器
         selected_fetcher = _browser_fetcher

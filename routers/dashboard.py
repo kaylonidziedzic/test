@@ -19,6 +19,7 @@ from services import api_key_store
 from services.cache_service import credential_cache
 from services.cache_service import credential_cache
 from services.proxy_manager import proxy_manager
+from services import config_store
 from utils.logger import log
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"], dependencies=[Depends(verify_admin_flexible)])
@@ -217,7 +218,7 @@ def get_config() -> Dict[str, Any]:
 
 @router.put("/config", dependencies=[Depends(verify_api_key)])
 def update_config(config: ConfigUpdate) -> Dict[str, Any]:
-    """更新配置（运行时生效，重启后恢复默认）"""
+    """更新配置（运行时生效，同时持久化到文件）"""
     updated = {}
 
     if config.cookie_expire_seconds is not None:
@@ -252,8 +253,13 @@ def update_config(config: ConfigUpdate) -> Dict[str, Any]:
         browser_pool.idle_timeout = config.browser_pool_idle_timeout
         updated["browser_pool_idle_timeout"] = config.browser_pool_idle_timeout
 
-    log.info(f"[Dashboard] 配置已更新: {updated}")
-    return {"message": "配置已更新", "updated": updated}
+    # 持久化保存到文件
+    if updated:
+        current_config = get_config()
+        config_store.save_config(current_config)
+
+    log.info(f"[Dashboard] 配置已更新并持久化: {updated}")
+    return {"message": "配置已更新并保存", "updated": updated}
 
 
 @router.get("/config/export", dependencies=[Depends(verify_api_key)])
@@ -317,14 +323,57 @@ def reload_proxies() -> Dict[str, Any]:
 @router.get("/proxies", dependencies=[Depends(verify_api_key)])
 def get_proxies() -> Dict[str, Any]:
     """获取当前代理列表"""
-    return {"proxies": proxy_manager.get_all(), "count": len(proxy_manager.get_all())}
+    proxies = proxy_manager.get_all()
+    return {
+        "proxies": proxies,
+        "total": len(proxies),
+        "available": len(proxies),
+        "strategy": "round_robin"
+    }
+
+
+class ProxiesAdd(BaseModel):
+    proxies: List[str]
+
+
+class ProxyRemove(BaseModel):
+    proxy: str
+
+
+@router.post("/proxies", dependencies=[Depends(verify_api_key)])
+def add_proxies(req: ProxiesAdd) -> Dict[str, Any]:
+    """添加代理到列表"""
+    added = proxy_manager.add_proxies(req.proxies)
+    return {
+        "message": f"已添加 {added} 个代理",
+        "added": added,
+        "total": len(proxy_manager.get_all())
+    }
+
+
+@router.delete("/proxies", dependencies=[Depends(verify_api_key)])
+def remove_proxy(req: ProxyRemove) -> Dict[str, Any]:
+    """从列表中删除代理"""
+    removed = proxy_manager.remove_proxy(req.proxy)
+    if removed:
+        return {"message": "代理已删除", "success": True}
+    return {"message": "代理不存在", "success": False}
 
 
 
 class TestRequest(BaseModel):
     url: str
-    mode: str = "cookie"  # cookie 或 browser
+    mode: str = "cookie"
     force_refresh: bool = False
+    # 新增参数
+    api_type: str = "proxy"
+    proxy_mode: str = "none"
+    proxy: Optional[str] = None
+    body: Optional[str] = None
+    body_type: str = "none"
+    headers: Optional[Dict[str, str]] = None
+    selectors: Optional[Dict[str, str]] = None
+    wait_for: Optional[str] = None
 
 
 def _get_request_user(request: Request) -> str:
@@ -334,11 +383,13 @@ def _get_request_user(request: Request) -> str:
 
 @router.post("/test", dependencies=[Depends(verify_api_key)])
 def test_bypass(req: TestRequest, request: Request) -> Dict[str, Any]:
-    """测试过盾"""
-    from core.solver import solve_turnstile
+    """测试过盾 (支持完整参数)"""
+    from services.execution_service import execute_rule_proxy, execute_rule_raw, execute_rule_reader
+    from services.rule_service import ScrapeConfig
 
     start = time.time()
     user = _get_request_user(request)
+    
     try:
         # 如果强制刷新，先清除该域名缓存
         if req.force_refresh:
@@ -346,19 +397,70 @@ def test_bypass(req: TestRequest, request: Request) -> Dict[str, Any]:
             domain = urlparse(req.url).netloc
             credential_cache.invalidate(domain)
 
-        result = solve_turnstile(req.url)
-        duration = time.time() - start
-        record_request(req.url, True, duration, user)
+        # 构建临时配置
+        config = ScrapeConfig(
+            name="QuickTest",
+            target_url=req.url,
+            mode=req.mode,
+            api_type=req.api_type,
+            proxy_mode=req.proxy_mode,
+            proxy=req.proxy,
+            body=req.body,
+            body_type=req.body_type,
+            headers=req.headers,
+            selectors=req.selectors,
+            wait_for=req.wait_for,
+            # 默认值
+            method="GET" if not req.body or req.body_type == "none" else "POST", 
+            is_public=False
+        )
+        
+        # 执行请求
+        result = None
+        if req.api_type == "raw":
+            resp = execute_rule_raw(config)
+            # raw 无法直接返回 JSON，这里做个特殊处理，转为 meta 信息
+            result = {
+                "success": 200 <= resp.status_code < 300,
+                "status": resp.status_code,
+                "data": {"message": "Binary/Raw content returned"},
+                "raw_length": len(resp.body),
+                "headers": dict(resp.headers)
+            }
+        elif req.api_type == "reader":
+            resp = execute_rule_reader(config)
+            result = {
+                "success": 200 <= resp.status_code < 300,
+                "status": resp.status_code,
+                "data": {"content": "HTML Content"},
+                "text": str(resp.body)[:1000] + "...", # 截断显示
+                "raw_length": len(resp.body),
+                "headers": dict(resp.headers)
+            }
+        else: # proxy
+            exec_result = execute_rule_proxy(config)
+            result = {
+                "success": 200 <= exec_result.get("status", 500) < 300,
+                "status": exec_result.get("status"),
+                "data": exec_result.get("data"),
+                "raw_length": exec_result.get("raw_length"),
+                "headers": exec_result.get("headers"),
+                "cookies": exec_result.get("cookies"),
+                "cookies_count": len(exec_result.get("cookies") or {})
+            }
 
+        duration = time.time() - start
+        record_request(req.url, result.get("success", False), duration, user)
+
+        # 合并结果
         return {
-            "success": True,
+            "success": result.get("success", False),
             "duration_ms": round(duration * 1000, 2),
             "mode": req.mode,
-            "cookies": result["cookies"],
-            "cookies_count": len(result["cookies"]),
-            "ua": result["ua"],
             "user": user,
+            **result
         }
+            
     except Exception as e:
         duration = time.time() - start
         record_request(req.url, False, duration, user, str(e))

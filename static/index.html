@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -24,63 +24,7 @@
             }
         }
     </script>
-
-    <style>
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #d4d4d8;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a1a1aa;
-        }
-
-        .loader {
-            border: 2px solid rgba(59, 130, 246, 0.2);
-            border-left-color: #3b82f6;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        [v-cloak] {
-            display: none !important;
-        }
-
-        .log-line {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            color: #3f3f46;
-        }
-
-        .log-line.log-info {
-            color: #3b82f6;
-        }
-
-        .log-line.log-warning {
-            color: #f59e0b;
-        }
-
-        .log-line.log-error {
-            color: #ef4444;
-        }
-
-        .log-line.log-success {
-            color: #10b981;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/app.css">
 </head>
 
 <body class="antialiased h-screen overflow-hidden bg-zinc-50">
@@ -373,7 +317,8 @@
                         <div v-if="activeTab === 'rules'" class="space-y-6">
                             <!-- 快速测试 -->
                             <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
-                                <div class="px-6 py-4 border-b border-zinc-200 bg-gradient-to-r from-purple-50 to-blue-50">
+                                <div
+                                    class="px-6 py-4 border-b border-zinc-200 bg-gradient-to-r from-purple-50 to-blue-50">
                                     <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
                                         <i class="ri-flashlight-line text-purple-600"></i> 快速测试
                                     </h3>
@@ -420,21 +365,90 @@
                                     <!-- 测试结果 -->
                                     <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
                                         <div class="flex justify-between items-center mb-3">
-                                            <span :class="['font-semibold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
-                                                <i :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
+                                            <span
+                                                :class="['font-semibold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
+                                                <i
+                                                    :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
                                                 {{ testResult.success ? '成功' : '失败' }}
                                             </span>
-                                            <span class="font-mono text-zinc-500 text-xs">{{ testResult.duration_ms }}ms</span>
+                                            <span class="font-mono text-zinc-500 text-xs">{{ testResult.duration_ms
+                                                }}ms</span>
                                         </div>
-                                        <div v-if="testResult.error" class="text-xs text-red-600 p-2 bg-red-50 rounded border border-red-200">
+                                        <div v-if="testResult.error"
+                                            class="text-xs text-red-600 p-2 bg-red-50 rounded border border-red-200">
                                             {{ testResult.error }}
                                         </div>
                                         <div v-if="testResult.success" class="space-y-2 text-xs">
                                             <div v-if="testResult.cookies_count" class="text-zinc-600">
-                                                <span class="font-semibold">Cookies:</span> {{ testResult.cookies_count }} 个
+                                                <span class="font-semibold">Cookies:</span> {{ testResult.cookies_count
+                                                }} 个
                                             </div>
                                             <div v-if="testResult.content_length" class="text-zinc-600">
-                                                <span class="font-semibold">内容长度:</span> {{ testResult.content_length.toLocaleString() }} 字符
+                                                <span class="font-semibold">内容长度:</span> {{
+                                                testResult.content_length.toLocaleString() }} 字符
+                                            </div>
+                                            <div v-if="testResult.raw_length" class="text-zinc-600">
+                                                <span class="font-semibold">原始长度:</span> {{
+                                                testResult.raw_length.toLocaleString() }} 字节
+                                            </div>
+                                            <div v-if="testResult.status" class="text-zinc-600">
+                                                <span class="font-semibold">状态码:</span> {{ testResult.status }}
+                                            </div>
+                                            <div v-if="testResult.data" class="mt-2 text-zinc-600">
+                                                <span class="font-semibold block mb-1">提取数据:</span>
+                                                <pre
+                                                    class="bg-white p-2 rounded border border-zinc-200 text-[10px] overflow-auto max-h-32">{{ testResult.data }}</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 批量测试 -->
+                                    <div class="border-t border-zinc-200 pt-4 mt-4">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="ri-stack-line text-orange-600"></i>
+                                            <span class="text-sm font-semibold text-zinc-900">批量测试</span>
+                                            <span class="text-xs text-zinc-500">（每行一个 URL，最多 10 个）</span>
+                                        </div>
+                                        <textarea v-model="batchTestUrls" rows="3"
+                                            placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-orange-500 resize-none mb-3"></textarea>
+                                        <div class="flex items-center gap-3">
+                                            <button @click="batchTestBypass" :disabled="batchTesting || !batchTestUrls.trim()"
+                                                class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center gap-2">
+                                                <i v-if="!batchTesting" class="ri-play-circle-line"></i>
+                                                <span class="loader w-4 h-4" v-else></span>
+                                                {{ batchTesting ? '批量测试中...' : '开始批量测试' }}
+                                            </button>
+                                            <div v-if="batchTesting" class="flex items-center gap-2">
+                                                <div class="w-32 h-2 bg-zinc-200 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-orange-500 transition-all" :style="{width: batchProgress + '%'}"></div>
+                                                </div>
+                                                <span class="text-xs text-zinc-500">{{ batchProgress }}%</span>
+                                            </div>
+                                        </div>
+                                        <!-- 批量测试结果 -->
+                                        <div v-if="batchTestResults" class="mt-4 p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <span class="font-semibold text-sm text-zinc-900">批量测试结果</span>
+                                                <div class="flex items-center gap-3 text-xs">
+                                                    <span class="text-green-600"><i class="ri-checkbox-circle-fill mr-1"></i>成功: {{ batchTestResults.success }}</span>
+                                                    <span class="text-red-600"><i class="ri-close-circle-fill mr-1"></i>失败: {{ batchTestResults.failed }}</span>
+                                                    <span class="text-zinc-500">总计: {{ batchTestResults.total }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                                <div v-for="(r, idx) in batchTestResults.results" :key="idx"
+                                                    :class="['p-2 rounded text-xs flex items-center justify-between',
+                                                        r.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200']">
+                                                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                                                        <i :class="r.success ? 'ri-checkbox-circle-fill text-green-600' : 'ri-close-circle-fill text-red-600'"></i>
+                                                        <span class="font-mono truncate">{{ r.url }}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                                        <span class="text-zinc-500">{{ r.duration_ms }}ms</span>
+                                                        <span v-if="r.error" class="text-red-600 truncate" style="max-width: 8rem;" :title="r.error">{{ r.error }}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -443,7 +457,8 @@
 
                             <!-- 规则列表 -->
                             <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
-                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                                <div
+                                    class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
                                             <i class="ri-magic-line text-purple-600"></i> 采集规则
@@ -476,35 +491,44 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-zinc-200 text-zinc-700">
-                                            <tr v-for="rule in rules" :key="rule.id" class="hover:bg-zinc-50 transition-all">
+                                            <tr v-for="rule in rules" :key="rule.id"
+                                                class="hover:bg-zinc-50 transition-all">
                                                 <td class="px-6 py-4">
                                                     <div class="font-medium text-zinc-900">{{ rule.name }}</div>
-                                                    <div class="text-xs text-zinc-500">{{ formatRuleTime(rule.created_at) }}</div>
+                                                    <div class="text-xs text-zinc-500">{{
+                                                        formatRuleTime(rule.created_at) }}</div>
                                                 </td>
-                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate" :title="rule.target_url">
+                                                <td class="px-6 py-4 font-mono text-xs max-w-xs truncate"
+                                                    :title="rule.target_url">
                                                     {{ rule.target_url }}
                                                 </td>
                                                 <td class="px-6 py-4 text-center">
-                                                    <span :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
+                                                    <span
+                                                        :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
                                                         (rule.api_type || 'proxy') === 'proxy' ? 'bg-purple-100 text-purple-700' :
                                                         (rule.api_type || 'proxy') === 'raw' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700']">
-                                                        {{ (rule.api_type || 'proxy') === 'proxy' ? 'JSON' : (rule.api_type || 'proxy') === 'raw' ? 'Raw' : 'Reader' }}
+                                                        {{ (rule.api_type || 'proxy') === 'proxy' ? 'JSON' :
+                                                        (rule.api_type || 'proxy') === 'raw' ? 'Raw' : 'Reader' }}
                                                     </span>
                                                 </td>
                                                 <td class="px-6 py-4 text-center">
-                                                    <span :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
+                                                    <span
+                                                        :class="['inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium',
                                                         rule.is_public ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-600']">
-                                                        <i :class="rule.is_public ? 'ri-lock-unlock-line mr-1' : 'ri-lock-line mr-1'"></i>
+                                                        <i
+                                                            :class="rule.is_public ? 'ri-lock-unlock-line mr-1' : 'ri-lock-line mr-1'"></i>
                                                         {{ rule.is_public ? '公开' : '私有' }}
                                                     </span>
                                                 </td>
                                                 <td class="px-6 py-4">
                                                     <div class="flex items-center gap-2">
-                                                        <code class="text-xs bg-zinc-100 px-2 py-1 rounded font-mono text-purple-600">/v1/run/{{ rule.id }}</code>
+                                                        <code
+                                                            class="text-xs bg-zinc-100 px-2 py-1 rounded font-mono text-purple-600">/v1/run/{{ rule.id }}</code>
                                                         <button @click="copyPermlink(rule)"
                                                             class="p-1 text-zinc-400 hover:text-purple-600 transition-all"
                                                             :title="copiedRuleId === rule.id ? '已复制!' : '复制链接'">
-                                                            <i :class="copiedRuleId === rule.id ? 'ri-check-line text-green-500' : 'ri-file-copy-line'"></i>
+                                                            <i
+                                                                :class="copiedRuleId === rule.id ? 'ri-check-line text-green-500' : 'ri-file-copy-line'"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -548,14 +572,16 @@
                                 <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                                     <i class="ri-test-tube-line text-green-600"></i> 测试结果
                                 </h3>
-                                <div v-if="ruleTestResult.error" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                <div v-if="ruleTestResult.error"
+                                    class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                                     <div class="font-semibold mb-1">错误：</div>
                                     {{ ruleTestResult.error }}
                                 </div>
                                 <div v-else class="space-y-4">
                                     <div v-if="ruleTestResult.meta" class="p-3 bg-zinc-50 rounded-lg">
                                         <div class="text-xs text-zinc-500 mb-1">规则信息</div>
-                                        <div class="font-mono text-sm">{{ ruleTestResult.meta.name }} ({{ ruleTestResult.meta.rule_id }})</div>
+                                        <div class="font-mono text-sm">{{ ruleTestResult.meta.name }} ({{
+                                            ruleTestResult.meta.rule_id }})</div>
                                     </div>
                                     <div v-if="ruleTestResult.data && Object.keys(ruleTestResult.data).length > 0">
                                         <div class="text-xs text-zinc-500 mb-2">提取数据</div>
@@ -574,27 +600,31 @@
                             </div>
 
                             <!-- 使用说明 -->
-                            <div class="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+                            <div
+                                class="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
                                 <h3 class="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
                                     <i class="ri-lightbulb-line"></i> 使用说明
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-purple-800">
                                     <div class="flex items-start gap-2">
-                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">1</span>
+                                        <span
+                                            class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">1</span>
                                         <div>
                                             <div class="font-semibold">创建规则</div>
                                             <div class="text-purple-600">填写目标 URL 和 CSS 选择器</div>
                                         </div>
                                     </div>
                                     <div class="flex items-start gap-2">
-                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">2</span>
+                                        <span
+                                            class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">2</span>
                                         <div>
                                             <div class="font-semibold">获取 Permlink</div>
                                             <div class="text-purple-600">保存后自动生成专属链接</div>
                                         </div>
                                     </div>
                                     <div class="flex items-start gap-2">
-                                        <span class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">3</span>
+                                        <span
+                                            class="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold flex-shrink-0">3</span>
                                         <div>
                                             <div class="font-semibold">直接调用</div>
                                             <div class="text-purple-600">GET 请求 Permlink 即可获取数据</div>
@@ -607,8 +637,10 @@
                         <!-- 规则编辑弹窗 -->
                         <div v-if="showRuleForm" @click="showRuleForm = false"
                             class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div @click.stop class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
-                                <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
+                            <div @click.stop
+                                class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+                                <div
+                                    class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
                                     <h3 class="text-base font-semibold text-zinc-900">
                                         {{ editingRule ? '编辑规则' : '新建采集规则' }}
                                     </h3>
@@ -637,8 +669,10 @@
                                     </div>
 
                                     <div>
-                                        <label class="block text-xs font-semibold text-zinc-700 mb-2">目标 URL <span class="text-red-500">*</span></label>
-                                        <input v-model="ruleForm.target_url" type="url" placeholder="https://example.com/page"
+                                        <label class="block text-xs font-semibold text-zinc-700 mb-2">目标 URL <span
+                                                class="text-red-500">*</span></label>
+                                        <input v-model="ruleForm.target_url" type="url"
+                                            placeholder="https://example.com/page"
                                             class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none font-mono">
                                     </div>
 
@@ -669,6 +703,27 @@
                                         </div>
                                     </div>
 
+                                    <!-- 高级配置 -->
+                                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
+                                        <div class="flex items-center gap-2 text-green-700 text-xs font-semibold">
+                                            <i class="ri-settings-3-line"></i> 高级配置
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div v-if="ruleForm.mode === 'browser'">
+                                                <label class="block text-xs text-zinc-600 mb-1">等待元素（可选）</label>
+                                                <input v-model="ruleForm.wait_for" type="text" placeholder=".content, #main, article"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
+                                                <p class="text-xs text-zinc-500 mt-1">浏览器模式下等待指定元素出现后再采集</p>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-zinc-600 mb-1">缓存时间（秒）</label>
+                                                <input v-model.number="ruleForm.cache_ttl" type="number" min="0" placeholder="0 表示不缓存"
+                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                <p class="text-xs text-zinc-500 mt-1">相同请求在此时间内返回缓存结果</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- 代理配置 -->
                                     <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
                                         <div class="flex items-center gap-2 text-blue-700 text-xs font-semibold">
@@ -686,7 +741,8 @@
                                             </div>
                                             <div v-if="ruleForm.proxy_mode === 'fixed'">
                                                 <label class="block text-xs text-zinc-600 mb-1">代理地址</label>
-                                                <input v-model="ruleForm.proxy" type="text" placeholder="socks5://ip:port 或 http://ip:port"
+                                                <input v-model="ruleForm.proxy" type="text"
+                                                    placeholder="socks5://ip:port 或 http://ip:port"
                                                     class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
                                             </div>
                                         </div>
@@ -697,31 +753,25 @@
                                     </div>
 
                                     <!-- POST 请求体配置 -->
-                                    <div v-if="ruleForm.method === 'POST'" class="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                                    <div v-if="ruleForm.method === 'POST'"
+                                        class="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
                                         <div class="flex items-center gap-2 text-orange-700 text-xs font-semibold">
                                             <i class="ri-send-plane-line"></i> POST 请求体配置
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div>
-                                                <label class="block text-xs text-zinc-600 mb-1">Body 类型</label>
-                                                <select v-model="ruleForm.body_type"
-                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
-                                                    <option value="none">无</option>
-                                                    <option value="json">JSON</option>
-                                                    <option value="form">Form (x-www-form-urlencoded)</option>
-                                                    <option value="raw">Raw Text</option>
-                                                </select>
-                                            </div>
-                                            <div v-if="ruleForm.mode === 'browser'">
-                                                <label class="block text-xs text-zinc-600 mb-1">等待元素</label>
-                                                <input v-model="ruleForm.wait_for" type="text" placeholder=".content"
-                                                    class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
-                                            </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-600 mb-1">Body 类型</label>
+                                            <select v-model="ruleForm.body_type"
+                                                class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
+                                                <option value="none">无</option>
+                                                <option value="json">JSON</option>
+                                                <option value="form">Form (x-www-form-urlencoded)</option>
+                                                <option value="raw">Raw Text</option>
+                                            </select>
                                         </div>
                                         <div v-if="ruleForm.body_type !== 'none'">
                                             <label class="block text-xs text-zinc-600 mb-1">请求体内容</label>
                                             <textarea v-model="ruleForm.body" rows="3"
-                                                :placeholder="ruleForm.body_type === 'json' ? '{key: value}' : ruleForm.body_type === 'form' ? 'key1=value1&key2=value2' : '原始文本...'"
+                                                placeholder="JSON: {key: value} / Form: key=value"
                                                 class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none resize-none"></textarea>
                                         </div>
                                     </div>
@@ -756,1488 +806,650 @@
                                             <label class="text-xs font-semibold text-zinc-700">数据提取规则（CSS 选择器）</label>
                                             <button @click="addSelector" type="button"
                                                 class="text-xs text-purple-600 hover:text-purple-500 flex items-center gap-1">
-                                                <i class="ri-add-line"></i> 添加字段
+                                            <i class="ri-add-line"></i> 添加字段
+                                        </button>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div v-for="(sel, idx) in ruleForm.selectors" :key="idx"
+                                            class="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                                            <input v-model="sel.key" type="text" placeholder="字段名，如 title"
+                                                class="flex-1 bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500">
+                                            <span class="text-zinc-400">:</span>
+                                            <input v-model="sel.selector" type="text"
+                                                placeholder="CSS 选择器，如 h1.title"
+                                                class="flex-[2] bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-purple-500">
+                                            <button @click="removeSelector(idx)" type="button"
+                                                class="p-2 text-zinc-400 hover:text-red-500 transition-all">
+                                                <i class="ri-delete-bin-line"></i>
                                             </button>
                                         </div>
-                                        <div class="space-y-2">
-                                            <div v-for="(sel, idx) in ruleForm.selectors" :key="idx"
-                                                class="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
-                                                <input v-model="sel.key" type="text" placeholder="字段名，如 title"
-                                                    class="flex-1 bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500">
-                                                <span class="text-zinc-400">:</span>
-                                                <input v-model="sel.selector" type="text" placeholder="CSS 选择器，如 h1.title"
-                                                    class="flex-[2] bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-purple-500">
-                                                <button @click="removeSelector(idx)" type="button"
-                                                    class="p-2 text-zinc-400 hover:text-red-500 transition-all">
-                                                    <i class="ri-delete-bin-line"></i>
-                                                </button>
-                                            </div>
-                                            <div v-if="ruleForm.selectors.length === 0"
-                                                class="p-4 bg-zinc-50 rounded-lg border border-dashed border-zinc-300 text-center">
-                                                <p class="text-xs text-zinc-500 mb-2">暂无提取规则，将返回完整响应</p>
-                                                <button @click="addSelector" type="button"
-                                                    class="text-xs text-purple-600 hover:text-purple-500">
-                                                    <i class="ri-add-line mr-1"></i>添加第一个字段
-                                                </button>
-                                            </div>
+                                        <div v-if="ruleForm.selectors.length === 0"
+                                            class="p-4 bg-zinc-50 rounded-lg border border-dashed border-zinc-300 text-center">
+                                            <p class="text-xs text-zinc-500 mb-2">暂无提取规则，将返回完整响应</p>
+                                            <button @click="addSelector" type="button"
+                                                class="text-xs text-purple-600 hover:text-purple-500">
+                                                <i class="ri-add-line mr-1"></i>添加第一个字段
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                        <p class="text-xs text-purple-700 font-semibold mb-2">
+                                            <i class="ri-lightbulb-line mr-1"></i>常用选择器示例
+                                        </p>
+                                        <div class="grid grid-cols-2 gap-2 text-xs text-purple-600 font-mono">
+                                            <div><code>h1</code> - 标题</div>
+                                            <div><code>.content</code> - class 选择</div>
+                                            <div><code>#main</code> - ID 选择</div>
+                                            <div><code>article p</code> - 嵌套选择</div>
+                                            <div><code>[data-id]</code> - 属性选择</div>
+                                            <div><code>div.box &gt; p</code> - 直接子元素</div>
                                         </div>
                                         <p class="text-xs text-zinc-500 mt-2">
                                             <i class="ri-information-line mr-1"></i>
                                             提示：使用浏览器 F12 查看元素，右键复制 CSS 选择器
                                         </p>
                                     </div>
-
-                                    <!-- 操作按钮 -->
-                                    <div class="flex justify-end gap-3 pt-4 border-t border-zinc-200">
-                                        <button @click="showRuleForm = false" type="button"
-                                            class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg transition-all">
-                                            取消
-                                        </button>
-                                        <button @click="saveRule" :disabled="rulesLoading"
-                                            class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white text-sm font-semibold rounded-lg shadow-lg disabled:opacity-50 flex items-center gap-2 transition-all">
-                                            <span v-if="rulesLoading" class="loader w-4 h-4"></span>
-                                            <i v-else class="ri-save-line"></i>
-                                            {{ rulesLoading ? '保存中...' : (editingRule ? '更新规则' : '创建规则') }}
-                                        </button>
-                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- USERS (Admin Only) -->
-                        <div v-if="activeTab === 'users'" class="space-y-6">
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2"><i
-                                                class="ri-key-2-line text-blue-600"></i> 用户与密钥</h3>
-                                        <p class="text-xs text-zinc-500 mt-1">仅文件存储部分可管理，环境变量中的密钥视为只读</p>
-                                    </div>
-                                    <button @click="loadUsers" :disabled="userLoading"
-                                        class="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-2">
-                                        <i class="ri-refresh-line"></i> 刷新
+                                <!-- 操作按钮 -->
+                                <div class="flex justify-end gap-3 pt-4 border-t border-zinc-200">
+                                    <button @click="showRuleForm = false" type="button"
+                                        class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg transition-all">
+                                        取消
+                                    </button>
+                                    <button @click="saveRule" :disabled="rulesLoading"
+                                        class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white text-sm font-semibold rounded-lg shadow-lg disabled:opacity-50 flex items-center gap-2 transition-all">
+                                        <span v-if="rulesLoading" class="loader w-4 h-4"></span>
+                                        <i v-else class="ri-save-line"></i>
+                                        {{ rulesLoading ? '保存中...' : (editingRule ? '更新规则' : '创建规则') }}
                                     </button>
                                 </div>
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                    <div class="lg:col-span-2">
-                                        <div class="overflow-x-auto">
-                                            <table class="min-w-full text-sm">
-                                                <thead>
-                                                    <tr class="text-left text-zinc-500">
-                                                        <th class="py-2">用户</th>
-                                                        <th class="py-2">角色</th>
-                                                        <th class="py-2">Key</th>
-                                                        <th class="py-2 text-right">操作</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr v-for="u in apiUsers" :key="u.user"
-                                                        class="border-t border-zinc-100">
-                                                        <td class="py-2 font-medium text-zinc-900">{{ u.user }}</td>
-                                                        <td class="py-2 text-xs">
-                                                            <span
-                                                                :class="['px-2 py-1 rounded-full font-semibold', u.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700']">
-                                                                {{ u.role || 'user' }}
-                                                            </span>
-                                                        </td>
-                                                        <td class="py-2 font-mono text-[11px] text-zinc-700 break-all">
-                                                            {{ u.key }}
-                                                        </td>
-                                                        <td class="py-2 text-right flex items-center gap-2 justify-end">
-                                                            <button @click="rotateUser(u)"
-                                                                class="text-xs px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded border border-zinc-200"
-                                                                :disabled="rotatingUser===u.user">
-                                                                {{ rotatingUser===u.user ? '重置中...' : '重置 Key' }}
-                                                            </button>
-                                                            <button @click="deleteUser(u)"
-                                                                class="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200">删除</button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr v-if="!apiUsers.length">
-                                                        <td colspan="4" class="py-4 text-center text-zinc-500 text-xs">
-                                                            暂无可管理用户</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                                        <h4 class="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2"><i
-                                                class="ri-user-add-line text-green-600"></i> 创建用户</h4>
-                                        <div class="space-y-3">
-                                            <div>
-                                                <label
-                                                    class="block text-xs font-semibold text-zinc-700 mb-1">用户名</label>
-                                                <input v-model="newUserName"
-                                                    class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs font-semibold text-zinc-700 mb-1">角色</label>
-                                                <select v-model="newUserRole"
-                                                    class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                                                    <option value="user">user</option>
-                                                    <option value="admin">admin</option>
-                                                </select>
-                                            </div>
-                                            <button @click="createUser" :disabled="userLoading"
-                                                class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-60 flex items-center justify-center gap-2">
-                                                <i class="ri-add-line"></i> 创建并生成 Key
-                                            </button>
-                                            <p class="text-[11px] text-zinc-500">提示：环境变量中的密钥不可在此删除/修改，仅显示文件存储的用户。</p>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- PROXIES 代理管理 -->
-                        <div v-if="activeTab === 'proxies'" class="space-y-6">
-                            <!-- 代理统计 -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                                            <i class="ri-global-line text-2xl text-blue-600"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-2xl font-bold text-zinc-900">{{ proxyStats.total }}</div>
-                                            <div class="text-xs text-zinc-500">总代理数</div>
-                                        </div>
-                                    </div>
+                    <!-- USERS (Admin Only) -->
+                    <div v-if="activeTab === 'users'" class="space-y-6">
+                        <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2"><i
+                                            class="ri-key-2-line text-blue-600"></i> 用户与密钥</h3>
+                                    <p class="text-xs text-zinc-500 mt-1">仅文件存储部分可管理，环境变量中的密钥视为只读</p>
                                 </div>
-                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                            <i class="ri-check-double-line text-2xl text-green-600"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-2xl font-bold text-green-600">{{ proxyStats.available }}</div>
-                                            <div class="text-xs text-zinc-500">可用代理</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                            <i class="ri-shuffle-line text-2xl text-purple-600"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-bold text-zinc-900">{{ proxyStats.strategy === 'round_robin' ? '轮询' : proxyStats.strategy }}</div>
-                                            <div class="text-xs text-zinc-500">轮换策略</div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <button @click="loadUsers" :disabled="userLoading"
+                                    class="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-2">
+                                    <i class="ri-refresh-line"></i> 刷新
+                                </button>
                             </div>
-
-                            <!-- 添加代理 -->
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                                    <i class="ri-add-circle-line text-blue-600"></i> 添加代理
-                                </h3>
-                                <div class="space-y-3">
-                                    <textarea v-model="newProxyText" rows="4"
-                                        placeholder="每行一个代理地址，支持格式：&#10;socks5://ip:port&#10;http://user:pass@ip:port&#10;ip:port"
-                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-                                    <div class="flex items-center gap-3">
-                                        <button @click="addProxies" :disabled="proxyLoading"
-                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50">
-                                            <i class="ri-add-line"></i> 添加代理
-                                        </button>
-                                        <button @click="reloadProxies" :disabled="proxyLoading"
-                                            class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium rounded-lg border border-zinc-200 flex items-center gap-2">
-                                            <i class="ri-refresh-line"></i> 从文件重新加载
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 代理列表 -->
-                            <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
-                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
-                                    <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
-                                        <i class="ri-list-check text-blue-600"></i> 代理列表
-                                    </h3>
-                                    <button @click="loadProxies" :disabled="proxyLoading"
-                                        class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-1">
-                                        <i class="ri-refresh-line"></i> 刷新
-                                    </button>
-                                </div>
-                                <div class="overflow-x-auto max-h-96">
-                                    <table class="w-full text-sm">
-                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase sticky top-0">
-                                            <tr>
-                                                <th class="px-6 py-3 text-left">代理地址</th>
-                                                <th class="px-6 py-3 text-center">类型</th>
-                                                <th class="px-6 py-3 text-center">状态</th>
-                                                <th class="px-6 py-3 text-center">操作</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-zinc-200">
-                                            <tr v-for="(proxy, idx) in proxyList" :key="idx" class="hover:bg-zinc-50">
-                                                <td class="px-6 py-3 font-mono text-xs">{{ proxy.address || proxy }}</td>
-                                                <td class="px-6 py-3 text-center">
-                                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                                                        {{ (proxy.address || proxy).split('://')[0] || 'http' }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-3 text-center">
-                                                    <span :class="['px-2 py-1 text-xs rounded',
-                                                        proxy.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700']">
-                                                        {{ proxy.status === 'failed' ? '失败' : '可用' }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-3 text-center">
-                                                    <button @click="removeProxy(proxy.address || proxy)"
-                                                        class="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
-                                                        title="删除">
-                                                        <i class="ri-delete-bin-line"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            <tr v-if="proxyList.length === 0">
-                                                <td colspan="4" class="px-6 py-12 text-center">
-                                                    <i class="ri-global-line text-4xl text-zinc-300 mb-2 block"></i>
-                                                    <p class="text-zinc-500 text-sm">暂无代理，请添加或从文件加载</p>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- 使用说明 -->
-                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
-                                <h3 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                                    <i class="ri-lightbulb-line"></i> 使用说明
-                                </h3>
-                                <div class="text-xs text-blue-800 space-y-2">
-                                    <p><strong>代理格式：</strong>支持 http://、https://、socks5:// 协议，可带认证信息</p>
-                                    <p><strong>文件加载：</strong>代理列表存储在 data/proxies.txt，每行一个</p>
-                                    <p><strong>规则配置：</strong>在规则配置中选择「使用 IP 池」即可自动轮换代理</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- LOGS -->
-                        <div v-if="activeTab === 'logs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div
-                                    class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
-                                    <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900">全局日志</h3>
-                                        <p class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
-                                            <i class="ri-pulse-line"></i> 实时服务器日志（SSE 优先，断开回退轮询）
-                                        </p>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <select v-model="logFilter"
-                                            class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
-                                            <option value="all">所有级别</option>
-                                            <option value="info">信息</option>
-                                            <option value="warning">警告</option>
-                                            <option value="error">错误</option>
-                                            <option value="success">成功</option>
-                                        </select>
-                                        <button @click="clearLogs"
-                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
-                                            <i class="ri-delete-bin-line"></i> 清空
-                                        </button>
-                                        <button @click="exportLogs"
-                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
-                                            <i class="ri-download-line"></i> 导出
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
-                                    <div v-for="(log, i) in filteredLogs" :key="i"
-                                        :class="['log-line', `log-${log.level}`]">
-                                        <span class="text-zinc-500">[{{ log.timestamp }}]</span>
-                                        <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
-                                        <span class="ml-2">{{ log.message }}</span>
-                                    </div>
-                                    <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div
-                                    class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
-                                    <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900">用户日志</h3>
-                                        <p class="text-xs text-zinc-500 mt-0.5">仅显示当前筛选用户的日志</p>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <select v-model="logFilter"
-                                            class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
-                                            <option value="all">所有级别</option>
-                                            <option value="info">信息</option>
-                                            <option value="warning">警告</option>
-                                            <option value="error">错误</option>
-                                            <option value="success">成功</option>
-                                        </select>
-                                        <button @click="exportLogs"
-                                            class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
-                                            <i class="ri-download-line"></i> 导出
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
-                                    <div v-for="(log, i) in filteredUserLogs" :key="i"
-                                        :class="['log-line', `log-${log.level}`]">
-                                        <span class="text-zinc-500">[{{ log.timestamp }}]</span>
-                                        <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
-                                        <span class="ml-2">{{ log.message }}</span>
-                                    </div>
-                                    <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">
-                                        暂无该用户日志</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- POOL -->
-                        <div v-if="activeTab === 'pool'" class="space-y-6">
-                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div
-                                    class="px-6 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50">
-                                    <div>
-                                        <h3 class="text-sm font-semibold text-zinc-900">浏览器实例</h3>
-                                        <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{
-                                            browserPoolInfo.available || 0 }} 可用</p>
-                                    </div>
-                                    <button @click="restartBrowserPool"
-                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
-                                        <i class="ri-restart-line"></i> 重启池
-                                    </button>
-                                </div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-sm">
-                                        <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase">
-                                            <tr>
-                                                <th class="px-6 py-3 text-left">实例 ID</th>
-                                                <th class="px-6 py-3 text-left">进程 ID</th>
-                                                <th class="px-6 py-3 text-left">状态</th>
-                                                <th class="px-6 py-3 text-left">使用次数</th>
-                                                <th class="px-6 py-3 text-left">创建时间</th>
-                                                <th class="px-6 py-3 text-left">最后使用</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-zinc-200 text-zinc-700">
-                                            <tr v-for="inst in browserPoolInfo.instances" :key="inst.id"
-                                                class="hover:bg-zinc-50 transition-all">
-                                                <td class="px-6 py-4 font-mono text-zinc-600">#{{ inst.id }}</td>
-                                                <td class="px-6 py-4 font-mono">{{ inst.pid }}</td>
-                                                <td class="px-6 py-4">
-                                                    <span
-                                                        :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
-                                                        inst.in_use ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700']">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div class="lg:col-span-2">
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full text-sm">
+                                            <thead>
+                                                <tr class="text-left text-zinc-500">
+                                                    <th class="py-2">用户</th>
+                                                    <th class="py-2">角色</th>
+                                                    <th class="py-2">Key</th>
+                                                    <th class="py-2 text-right">操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="u in apiUsers" :key="u.user"
+                                                    class="border-t border-zinc-100">
+                                                    <td class="py-2 font-medium text-zinc-900">{{ u.user }}</td>
+                                                    <td class="py-2 text-xs">
                                                         <span
-                                                            :class="['w-1.5 h-1.5 rounded-full mr-1.5', inst.in_use ? 'bg-yellow-500' : 'bg-blue-500']"></span>
-                                                        {{ inst.in_use ? '使用中' : '空闲' }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-4">{{ inst.use_count }}</td>
-                                                <td class="px-6 py-4 text-zinc-600">{{ inst.created_at }}</td>
-                                                <td class="px-6 py-4 text-zinc-600">{{ inst.last_used }}</td>
-                                            </tr>
-                                            <tr v-if="!browserPoolInfo.instances?.length">
-                                                <td colspan="6" class="px-6 py-16 text-center">
-                                                    <i class="ri-cpu-line text-4xl text-zinc-300 mb-2 block"></i>
-                                                    <p class="text-zinc-500 text-sm">暂无浏览器实例运行</p>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CACHE -->
-                        <div v-if="activeTab === 'cache'" class="space-y-6">
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <div class="flex items-center justify-between mb-6">
-                                    <div>
-                                        <h3 class="text-base font-semibold text-zinc-900">缓存统计</h3>
-                                        <p class="text-sm text-zinc-500 mt-1">凭证缓存性能指标</p>
-                                    </div>
-                                    <button @click="clearAllCache"
-                                        class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
-                                        <i class="ri-delete-bin-line"></i> 清空全部缓存
-                                    </button>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div
-                                        class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
-                                        <div class="flex items-center justify-between mb-3">
-                                            <div class="text-xs font-semibold text-blue-700">总条目</div>
-                                            <i class="ri-database-2-line text-blue-600 text-xl"></i>
-                                        </div>
-                                        <div class="text-3xl font-bold text-blue-900">{{ stats.cache?.total || 0 }}
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
-                                        <div class="flex items-center justify-between mb-3">
-                                            <div class="text-xs font-semibold text-green-700">命中率</div>
-                                            <i class="ri-speed-up-line text-green-600 text-xl"></i>
-                                        </div>
-                                        <div class="text-3xl font-bold text-green-900">{{ stats.cache?.hit_rate || 0 }}%
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
-                                        <div class="flex items-center justify-between mb-3">
-                                            <div class="text-xs font-semibold text-purple-700">存储大小</div>
-                                            <i class="ri-hard-drive-2-line text-purple-600 text-xl"></i>
-                                        </div>
-                                        <div class="text-3xl font-bold text-purple-900">{{
-                                            formatBytes(stats.cache?.size_bytes || 0) }}</div>
+                                                            :class="['px-2 py-1 rounded-full font-semibold', u.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700']">
+                                                            {{ u.role || 'user' }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="py-2 font-mono text-[11px] text-zinc-700 break-all">
+                                                        {{ u.key }}
+                                                    </td>
+                                                    <td class="py-2 text-right flex items-center gap-2 justify-end">
+                                                        <button @click="rotateUser(u)"
+                                                            class="text-xs px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded border border-zinc-200"
+                                                            :disabled="rotatingUser===u.user">
+                                                            {{ rotatingUser===u.user ? '重置中...' : '重置 Key' }}
+                                                        </button>
+                                                        <button @click="deleteUser(u)"
+                                                            class="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200">删除</button>
+                                                    </td>
+                                                </tr>
+                                                <tr v-if="!apiUsers.length">
+                                                    <td colspan="4" class="py-4 text-center text-zinc-500 text-xs">
+                                                        暂无可管理用户</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- CONFIG -->
-                        <div v-if="activeTab === 'config'" class="space-y-6 max-w-4xl">
-                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
-                                <h3 class="text-sm font-semibold text-zinc-900 mb-4">配置预设</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <button @click="applyPreset('development')"
-                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <i class="ri-code-s-slash-line text-2xl text-blue-600"></i>
-                                            <div class="text-sm font-semibold text-zinc-900">开发环境</div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500">最小池，快速回收</p>
-                                    </button>
-                                    <button @click="applyPreset('production')"
-                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <i class="ri-rocket-line text-2xl text-green-600"></i>
-                                            <div class="text-sm font-semibold text-zinc-900">生产环境</div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500">高流量优化</p>
-                                    </button>
-                                    <button @click="applyPreset('conservative')"
-                                        class="p-4 border-2 border-zinc-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <i class="ri-shield-check-line text-2xl text-purple-600"></i>
-                                            <div class="text-sm font-semibold text-zinc-900">保守模式</div>
-                                        </div>
-                                        <p class="text-xs text-zinc-500">低资源占用</p>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
-                                    <h3 class="text-base font-semibold text-zinc-900">实例池设置</h3>
-                                    <p class="text-sm text-zinc-500 mt-1">配置浏览器资源分配</p>
-                                </div>
-                                <div class="p-6 grid gap-6">
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+                                    <h4 class="text-sm font-semibold text-zinc-900 mb-3 flex items-center gap-2"><i
+                                            class="ri-user-add-line text-green-600"></i> 创建用户</h4>
+                                    <div class="space-y-3">
                                         <div>
-                                            <label class="block text-sm font-semibold text-zinc-700 mb-2">最小实例数</label>
-                                            <input type="number" v-model.number="config.browser_pool_min"
-                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <p class="text-xs text-zinc-500 mt-2">保持预热的基准浏览器数量</p>
+                                            <label
+                                                class="block text-xs font-semibold text-zinc-700 mb-1">用户名</label>
+                                            <input v-model="newUserName"
+                                                class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-semibold text-zinc-700 mb-2">最大实例数</label>
-                                            <input type="number" v-model.number="config.browser_pool_max"
-                                                class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <p class="text-xs text-zinc-500 mt-2">自动扩展的硬性限制</p>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-1">角色</label>
+                                            <select v-model="newUserRole"
+                                                class="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="user">user</option>
+                                                <option value="admin">admin</option>
+                                            </select>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">空闲超时 (秒)</label>
-                                        <input type="number" v-model.number="config.browser_pool_idle_timeout"
-                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <p class="text-xs text-zinc-500 mt-2">空闲浏览器被回收前的等待时间</p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">内存硬限制 (MB)</label>
-                                        <input type="number" v-model.number="config.memory_limit_mb"
-                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <p class="text-xs text-zinc-500 mt-2">超过此值容器将重启</p>
+                                        <button @click="createUser" :disabled="userLoading"
+                                            class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg disabled:opacity-60 flex items-center justify-center gap-2">
+                                            <i class="ri-add-line"></i> 创建并生成 Key
+                                        </button>
+                                        <p class="text-[11px] text-zinc-500">提示：环境变量中的密钥不可在此删除/修改，仅显示文件存储的用户。</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
-                                <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
-                                    <h3 class="text-base font-semibold text-zinc-900">过盾策略</h3>
-                                    <p class="text-sm text-zinc-500 mt-1">微调检测规避参数</p>
-                                </div>
-                                <div class="p-6 grid gap-6">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">Token 有效期
-                                            (秒)</label>
-                                        <input type="number" v-model.number="config.cookie_expire_seconds"
-                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                        <p class="text-xs text-zinc-500 mt-2">Cloudflare token 被视为有效的时长</p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">指纹随机化</label>
-                                        <select v-model="config.fingerprint_enabled"
-                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option :value="true">启用（推荐）</option>
-                                            <option :value="false">禁用</option>
-                                        </select>
-                                        <p class="text-xs text-zinc-500 mt-2">为每个实例随机化 Canvas/WebGL/Audio 指纹</p>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
 
-                            <div class="flex justify-end gap-3 pt-4">
-                                <button @click="exportConfig"
-                                    class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
-                                    <i class="ri-download-line"></i> 导出 JSON
-                                </button>
-                                <button @click="saveConfig" :disabled="saving"
-                                    class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
-                                    <span v-if="saving" class="flex items-center gap-2">
-                                        <span class="loader w-4 h-4"></span> 保存中...
-                                    </span>
-                                    <span v-else class="flex items-center gap-2">
-                                        <i class="ri-save-line"></i> 保存配置
-                                    </span>
-                                </button>
+                    <!-- PROXIES 代理管理 -->
+                    <div v-if="activeTab === 'proxies'" class="space-y-6">
+                        <!-- 代理统计 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                        <i class="ri-global-line text-2xl text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-zinc-900">{{ proxyStats.total }}</div>
+                                        <div class="text-xs text-zinc-500">总代理数</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                        <i class="ri-check-double-line text-2xl text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-green-600">{{ proxyStats.available }}
+                                        </div>
+                                        <div class="text-xs text-zinc-500">可用代理</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                        <i class="ri-shuffle-line text-2xl text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-zinc-900">{{ proxyStats.strategy ===
+                                            'round_robin' ? '轮询' : proxyStats.strategy }}</div>
+                                        <div class="text-xs text-zinc-500">轮换策略</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                    </div>
-                </main>
-            </div>
-        </template>
-
-        <!-- Detail Modal -->
-        <div v-if="selectedRequest" @click="selectedRequest = null"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div @click.stop
-                class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-                <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
-                    <h3 class="text-base font-semibold text-zinc-900">请求详情</h3>
-                    <button @click="selectedRequest = null"
-                        class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
-                        <i class="ri-close-line text-xl"></i>
-                    </button>
-                </div>
-                <div class="p-6 space-y-5">
-                    <div>
-                        <label class="text-xs font-semibold text-zinc-600 uppercase">状态</label>
-                        <div :class="['mt-2 inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold',
-                            selectedRequest.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
-                            <i
-                                :class="selectedRequest.success ? 'ri-checkbox-circle-fill mr-2' : 'ri-close-circle-fill mr-2'"></i>
-                            {{ selectedRequest.success ? '成功' : '失败' }}
+                        <!-- 添加代理 -->
+                        <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                            <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                <i class="ri-add-circle-line text-blue-600"></i> 添加代理
+                            </h3>
+                            <div class="space-y-3">
+                                <textarea v-model="newProxyText" rows="4"
+                                    placeholder="每行一个代理地址，支持格式：&#10;socks5://ip:port&#10;http://user:pass@ip:port&#10;ip:port"
+                                    class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                                <div class="flex items-center gap-3">
+                                    <button @click="addProxies" :disabled="proxyLoading"
+                                        class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50">
+                                        <i class="ri-add-line"></i> 添加代理
+                                    </button>
+                                    <button @click="reloadProxies" :disabled="proxyLoading"
+                                        class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium rounded-lg border border-zinc-200 flex items-center gap-2">
+                                        <i class="ri-refresh-line"></i> 从文件重新加载
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-zinc-600 uppercase">URL</label>
+
+                        <!-- 代理列表 -->
+                        <div class="bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
+                                    <i class="ri-list-check text-blue-600"></i> 代理列表
+                                </h3>
+                                <button @click="loadProxies" :disabled="proxyLoading"
+                                    class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-xs rounded-lg border border-zinc-200 flex items-center gap-1">
+                                    <i class="ri-refresh-line"></i> 刷新
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto max-h-96">
+                                <table class="w-full text-sm">
+                                    <thead
+                                        class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase sticky top-0">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left">代理地址</th>
+                                            <th class="px-6 py-3 text-center">类型</th>
+                                            <th class="px-6 py-3 text-center">状态</th>
+                                            <th class="px-6 py-3 text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-200">
+                                        <tr v-for="(proxy, idx) in proxyList" :key="idx" class="hover:bg-zinc-50">
+                                            <td class="px-6 py-3 font-mono text-xs">{{ proxy.address || proxy }}
+                                            </td>
+                                            <td class="px-6 py-3 text-center">
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                                                    {{ (proxy.address || proxy).split('://')[0] || 'http' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-3 text-center">
+                                                <span
+                                                    :class="['px-2 py-1 text-xs rounded',
+                                                    proxy.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700']">
+                                                    {{ proxy.status === 'failed' ? '失败' : '可用' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-3 text-center">
+                                                <button @click="removeProxy(proxy.address || proxy)"
+                                                    class="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                    title="删除">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="proxyList.length === 0">
+                                            <td colspan="4" class="px-6 py-12 text-center">
+                                                <i class="ri-global-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                <p class="text-zinc-500 text-sm">暂无代理，请添加或从文件加载</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 使用说明 -->
                         <div
-                            class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900 break-all">
-                            {{ selectedRequest.url }}
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-semibold text-zinc-600 uppercase">耗时</label>
-                            <div
-                                class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
-                                {{ selectedRequest.duration_ms }}ms
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-semibold text-zinc-600 uppercase">时间戳</label>
-                            <div
-                                class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
-                                {{ selectedRequest.timestamp }}
+                            class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
+                            <h3 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                <i class="ri-lightbulb-line"></i> 使用说明
+                            </h3>
+                            <div class="text-xs text-blue-800 space-y-2">
+                                <p><strong>代理格式：</strong>支持 http://、https://、socks5:// 协议，可带认证信息</p>
+                                <p><strong>文件加载：</strong>代理列表存储在 data/proxies.txt，每行一个</p>
+                                <p><strong>规则配置：</strong>在规则配置中选择「使用 IP 池」即可自动轮换代理</p>
                             </div>
                         </div>
                     </div>
-                    <div v-if="selectedRequest.error">
-                        <label class="text-xs font-semibold text-zinc-600 uppercase">错误信息</label>
-                        <div class="mt-2 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 break-all">
-                            {{ selectedRequest.error }}
+
+                    <!-- LOGS -->
+                    <div v-if="activeTab === 'logs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-900">全局日志</h3>
+                                    <p class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
+                                        <i class="ri-pulse-line"></i> 实时服务器日志（SSE 优先，断开回退轮询）
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <select v-model="logFilter"
+                                        class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                        <option value="all">所有级别</option>
+                                        <option value="info">信息</option>
+                                        <option value="warning">警告</option>
+                                        <option value="error">错误</option>
+                                        <option value="success">成功</option>
+                                    </select>
+                                    <button @click="clearLogs"
+                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <i class="ri-delete-bin-line"></i> 清空
+                                    </button>
+                                    <button @click="exportLogs"
+                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <i class="ri-download-line"></i> 导出
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
+                                <div v-for="(log, i) in filteredLogs" :key="i"
+                                    :class="['log-line', `log-${log.level}`]">
+                                    <span class="text-zinc-500">[{{ log.timestamp }}]</span>
+                                    <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
+                                    <span class="ml-2">{{ log.message }}</span>
+                                </div>
+                                <div v-if="filteredLogs.length === 0" class="text-center text-zinc-500 py-12">暂无日志显示
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-900">用户日志</h3>
+                                    <p class="text-xs text-zinc-500 mt-0.5">仅显示当前筛选用户的日志</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <select v-model="logFilter"
+                                        class="text-xs bg-white border border-zinc-200 text-zinc-900 rounded-lg px-2 py-1.5 outline-none">
+                                        <option value="all">所有级别</option>
+                                        <option value="info">信息</option>
+                                        <option value="warning">警告</option>
+                                        <option value="error">错误</option>
+                                        <option value="success">成功</option>
+                                    </select>
+                                    <button @click="exportLogs"
+                                        class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1 px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                        <i class="ri-download-line"></i> 导出
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="h-[520px] overflow-y-auto bg-zinc-50 p-4 font-mono text-xs">
+                                <div v-for="(log, i) in filteredUserLogs" :key="i"
+                                    :class="['log-line', `log-${log.level}`]">
+                                    <span class="text-zinc-500">[{{ log.timestamp }}]</span>
+                                    <span class="font-semibold ml-2">[{{ log.level.toUpperCase() }}]</span>
+                                    <span class="ml-2">{{ log.message }}</span>
+                                </div>
+                                <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">
+                                    暂无该用户日志</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- POOL -->
+                    <div v-if="activeTab === 'pool'" class="space-y-6">
+                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-900">浏览器实例</h3>
+                                    <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{
+                                        browserPoolInfo.available || 0 }} 可用</p>
+                                </div>
+                                <button @click="restartBrowserPool"
+                                    class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                    <i class="ri-restart-line"></i> 重启池
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-zinc-50 text-zinc-600 text-xs font-semibold uppercase">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left">实例 ID</th>
+                                            <th class="px-6 py-3 text-left">进程 ID</th>
+                                            <th class="px-6 py-3 text-left">状态</th>
+                                            <th class="px-6 py-3 text-left">使用次数</th>
+                                            <th class="px-6 py-3 text-left">创建时间</th>
+                                            <th class="px-6 py-3 text-left">最后使用</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-200 text-zinc-700">
+                                        <tr v-for="inst in browserPoolInfo.instances" :key="inst.id"
+                                            class="hover:bg-zinc-50 transition-all">
+                                            <td class="px-6 py-4 font-mono text-zinc-600">#{{ inst.id }}</td>
+                                            <td class="px-6 py-4 font-mono">{{ inst.pid }}</td>
+                                            <td class="px-6 py-4">
+                                                <span
+                                                    :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold',
+                                                    inst.in_use ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700']">
+                                                    <span
+                                                        :class="['w-1.5 h-1.5 rounded-full mr-1.5', inst.in_use ? 'bg-yellow-500' : 'bg-blue-500']"></span>
+                                                    {{ inst.in_use ? '使用中' : '空闲' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4">{{ inst.use_count }}</td>
+                                            <td class="px-6 py-4 text-zinc-600">{{ inst.created_at }}</td>
+                                            <td class="px-6 py-4 text-zinc-600">{{ inst.last_used }}</td>
+                                        </tr>
+                                        <tr v-if="!browserPoolInfo.instances?.length">
+                                            <td colspan="6" class="px-6 py-16 text-center">
+                                                <i class="ri-cpu-line text-4xl text-zinc-300 mb-2 block"></i>
+                                                <p class="text-zinc-500 text-sm">暂无浏览器实例运行</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CACHE -->
+                    <div v-if="activeTab === 'cache'" class="space-y-6">
+                        <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-base font-semibold text-zinc-900">缓存统计</h3>
+                                    <p class="text-sm text-zinc-500 mt-1">凭证缓存性能指标</p>
+                                </div>
+                                <button @click="clearAllCache"
+                                    class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                                    <i class="ri-delete-bin-line"></i> 清空全部缓存
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div
+                                    class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="text-xs font-semibold text-blue-700">总条目</div>
+                                        <i class="ri-database-2-line text-blue-600 text-xl"></i>
+                                    </div>
+                                    <div class="text-3xl font-bold text-blue-900">{{ stats.cache?.total || 0 }}
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="text-xs font-semibold text-green-700">命中率</div>
+                                        <i class="ri-speed-up-line text-green-600 text-xl"></i>
+                                    </div>
+                                    <div class="text-3xl font-bold text-green-900">{{ stats.cache?.hit_rate || 0 }}%
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="text-xs font-semibold text-purple-700">存储大小</div>
+                                        <i class="ri-hard-drive-2-line text-purple-600 text-xl"></i>
+                                    </div>
+                                    <div class="text-3xl font-bold text-purple-900">{{
+                                        formatBytes(stats.cache?.size_bytes || 0) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONFIG -->
+                    <div v-if="activeTab === 'config'" class="space-y-6 max-w-4xl">
+                        <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                            <h3 class="text-sm font-semibold text-zinc-900 mb-4">配置预设</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button @click="applyPreset('development')"
+                                    class="p-4 border-2 border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <i class="ri-code-s-slash-line text-2xl text-blue-600"></i>
+                                        <div class="text-sm font-semibold text-zinc-900">开发环境</div>
+                                    </div>
+                                    <p class="text-xs text-zinc-500">最小池，快速回收</p>
+                                </button>
+                                <button @click="applyPreset('production')"
+                                    class="p-4 border-2 border-zinc-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <i class="ri-rocket-line text-2xl text-green-600"></i>
+                                        <div class="text-sm font-semibold text-zinc-900">生产环境</div>
+                                    </div>
+                                    <p class="text-xs text-zinc-500">高流量优化</p>
+                                </button>
+                                <button @click="applyPreset('conservative')"
+                                    class="p-4 border-2 border-zinc-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <i class="ri-shield-check-line text-2xl text-purple-600"></i>
+                                        <div class="text-sm font-semibold text-zinc-900">保守模式</div>
+                                    </div>
+                                    <p class="text-xs text-zinc-500">低资源占用</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                            <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
+                                <h3 class="text-base font-semibold text-zinc-900">实例池设置</h3>
+                                <p class="text-sm text-zinc-500 mt-1">配置浏览器资源分配</p>
+                            </div>
+                            <div class="p-6 grid gap-6">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">最小实例数</label>
+                                        <input type="number" v-model.number="config.browser_pool_min"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <p class="text-xs text-zinc-500 mt-2">保持预热的基准浏览器数量</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-zinc-700 mb-2">最大实例数</label>
+                                        <input type="number" v-model.number="config.browser_pool_max"
+                                            class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <p class="text-xs text-zinc-500 mt-2">自动扩展的硬性限制</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-zinc-700 mb-2">空闲超时 (秒)</label>
+                                    <input type="number" v-model.number="config.browser_pool_idle_timeout"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <p class="text-xs text-zinc-500 mt-2">空闲浏览器被回收前的等待时间</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-zinc-700 mb-2">内存硬限制 (MB)</label>
+                                    <input type="number" v-model.number="config.memory_limit_mb"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <p class="text-xs text-zinc-500 mt-2">超过此值容器将重启</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                            <div class="px-6 py-4 border-b border-zinc-200 bg-zinc-50">
+                                <h3 class="text-base font-semibold text-zinc-900">过盾策略</h3>
+                                <p class="text-sm text-zinc-500 mt-1">微调检测规避参数</p>
+                            </div>
+                            <div class="p-6 grid gap-6">
+                                <div>
+                                    <label class="block text-sm font-semibold text-zinc-700 mb-2">Token 有效期
+                                        (秒)</label>
+                                    <input type="number" v-model.number="config.cookie_expire_seconds"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <p class="text-xs text-zinc-500 mt-2">Cloudflare token 被视为有效的时长</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-zinc-700 mb-2">指纹随机化</label>
+                                    <select v-model="config.fingerprint_enabled"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option :value="true">启用（推荐）</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                    <p class="text-xs text-zinc-500 mt-2">为每个实例随机化 Canvas/WebGL/Audio 指纹</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4">
+                            <button @click="exportConfig"
+                                class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
+                                <i class="ri-download-line"></i> 导出 JSON
+                            </button>
+                            <button @click="saveConfig" :disabled="saving"
+                                class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
+                                <span v-if="saving" class="flex items-center gap-2">
+                                    <span class="loader w-4 h-4"></span> 保存中...
+                                </span>
+                                <span v-else class="flex items-center gap-2">
+                                    <i class="ri-save-line"></i> 保存配置
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </template>
+
+    <!-- Detail Modal -->
+    <div v-if="selectedRequest" @click="selectedRequest = null"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div @click.stop
+            class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-base font-semibold text-zinc-900">请求详情</h3>
+                <button @click="selectedRequest = null"
+                    class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="text-xs font-semibold text-zinc-600 uppercase">状态</label>
+                    <div :class="['mt-2 inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold',
+                        selectedRequest.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                        <i
+                            :class="selectedRequest.success ? 'ri-checkbox-circle-fill mr-2' : 'ri-close-circle-fill mr-2'"></i>
+                        {{ selectedRequest.success ? '成功' : '失败' }}
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-zinc-600 uppercase">URL</label>
+                    <div
+                        class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900 break-all">
+                        {{ selectedRequest.url }}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-600 uppercase">耗时</label>
+                        <div
+                            class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                            {{ selectedRequest.duration_ms }}ms
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-zinc-600 uppercase">时间戳</label>
+                        <div
+                            class="mt-2 p-4 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-sm text-zinc-900">
+                            {{ selectedRequest.timestamp }}
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Toast -->
-        <div v-if="toast.show" class="fixed bottom-6 right-6 z-50">
-            <div :class="['px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium border backdrop-blur-md',
-                toast.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
-                toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
-                'bg-blue-50 text-blue-700 border-blue-200']">
-                <i
-                    :class="toast.type === 'success' ? 'ri-checkbox-circle-fill text-xl' : toast.type === 'error' ? 'ri-error-warning-fill text-xl' : 'ri-information-fill text-xl'"></i>
-                {{ toast.message }}
+                <div v-if="selectedRequest.error">
+                    <label class="text-xs font-semibold text-zinc-600 uppercase">错误信息</label>
+                    <div class="mt-2 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 break-all">
+                        {{ selectedRequest.error }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        const { createApp, ref, reactive, onMounted, onUnmounted, computed, watch } = Vue;
-
-        const LineChart = {
-            props: ['data'],
-            template: `
-                <svg viewBox="0 0 100 30" class="w-full h-full" preserveAspectRatio="none">
-                    <defs>
-                        <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/>
-                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
-                        </linearGradient>
-                    </defs>
-                    <path :d="fillPath" fill="url(#grad)" />
-                    <path :d="path" fill="none" stroke="#3b82f6" stroke-width="2" />
-                    <circle v-for="(p, i) in points" :key="i" :cx="p.x" :cy="p.y" r="2.5" fill="#3b82f6" opacity="0.8" />
-                </svg>
-            `,
-            setup(props) {
-                const points = computed(() => {
-                    const d = props.data || [];
-                    if (d.length < 2) return [];
-                    return d.map((item, i) => ({
-                        x: (i / (d.length - 1)) * 100,
-                        y: 30 - (item.success_rate / 100) * 25
-                    }));
-                });
-                const path = computed(() => points.value.length < 2 ? '' : points.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
-                const fillPath = computed(() => path.value ? `${path.value} L 100 30 L 0 30 Z` : '');
-                return { path, fillPath, points };
-            }
-        };
-
-        const DonutChart = {
-            props: ['data'],
-            template: `
-                <div class="flex items-center gap-8">
-                    <svg viewBox="0 0 100 100" class="w-40 h-40">
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="#f4f4f5" stroke-width="20"/>
-                        <circle v-for="(seg, i) in segments" :key="i"
-                            cx="50" cy="50" r="40" fill="none"
-                            :stroke="seg.color" stroke-width="20"
-                            :stroke-dasharray="seg.dash"
-                            :stroke-dashoffset="seg.offset"
-                            transform="rotate(-90 50 50)"/>
-                        <text x="50" y="45" text-anchor="middle" font-size="18" font-weight="bold" fill="#18181b">{{ total }}</text>
-                        <text x="50" y="60" text-anchor="middle" font-size="9" fill="#71717a">总计</text>
-                    </svg>
-                    <div class="space-y-2">
-                        <div v-for="item in data" :key="item.label" class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full" :style="{backgroundColor: item.color}"></div>
-                            <div class="text-sm">
-                                <div class="font-medium text-zinc-900">{{ item.label }}</div>
-                                <div class="text-xs text-zinc-600">{{ item.value }} ({{ item.percentage }}%)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            setup(props) {
-                const total = computed(() => props.data.reduce((sum, item) => sum + item.value, 0));
-                const circ = 2 * Math.PI * 40;
-                const segments = computed(() => {
-                    let off = 0;
-                    return props.data.map(item => {
-                        const pct = total.value > 0 ? item.value / total.value : 0;
-                        const len = circ * pct;
-                        const seg = { color: item.color, dash: `${len} ${circ}`, offset: -off };
-                        off += len;
-                        return seg;
-                    });
-                });
-                return { segments, total };
-            }
-        };
-
-        createApp({
-            setup() {
-                const authenticated = ref(false), apiKey = ref(''), loading = ref(false), loginError = ref('');
-                const apiBaseUrl = ref('');
-                const autoRefresh = ref(true);
-                const sseConnected = ref(false);
-                const activeTab = ref('monitor'), saving = ref(false), testing = ref(false);
-                const testUrl = ref(''), testResult = ref(null);
-                const batchTesting = ref(false), batchTestUrls = ref(''), batchTestResults = ref(null), batchProgress = ref(0);
-                // 快速测试参数
-                const quickTestParams = reactive({
-                    api_type: 'proxy',
-                    mode: 'cookie',
-                    proxy_mode: 'none'
-                });
-                const selectedRequest = ref(null), searchQuery = ref(''), logFilter = ref('all'), requestUserFilter = ref('all');
-
-                const tabs = [
-                    { id: 'monitor', name: '总览', icon: 'ri-dashboard-3-line', desc: '实时监控和数据分析' },
-                    { id: 'rules', name: '规则配置', icon: 'ri-magic-line', desc: '创建规则和快速测试' },
-                    { id: 'proxies', name: '代理管理', icon: 'ri-global-line', desc: '管理 IP 池和代理列表' },
-                    { id: 'logs', name: '日志', icon: 'ri-file-list-3-line', desc: '系统日志和活动' },
-                    { id: 'pool', name: '实例池', icon: 'ri-cpu-line', desc: '浏览器池管理' },
-                    { id: 'cache', name: '缓存', icon: 'ri-database-2-line', desc: '缓存统计' },
-                    { id: 'config', name: '配置', icon: 'ri-settings-4-line', desc: '系统配置' },
-                    { id: 'users', name: '用户/密钥', icon: 'ri-key-2-line', desc: '管理 API Key 和权限', adminOnly: true },
-                ];
-
-                const status = reactive({}), stats = reactive({}), config = reactive({}), timeSeries = reactive([]);
-                const requestHistory = reactive([]), systemInfo = reactive({}), browserPoolInfo = reactive({ instances: [] });
-                const apiUsers = reactive([]);
-                const newUserName = ref(''), newUserRole = ref('user');
-                const userLoading = ref(false), rotatingUser = ref('');
-                const toast = reactive({ show: false, message: '', type: 'success' }), logs = reactive([]);
-                const userLogs = reactive([]);
-
-                // 规则配置相关状态
-                const rules = reactive([]);
-                const rulesLoading = ref(false);
-                const showRuleForm = ref(false);
-                const editingRule = ref(null);
-                const ruleForm = reactive({
-                    name: '',
-                    target_url: '',
-                    method: 'GET',
-                    mode: 'cookie',
-                    selectors: [],
-                    wait_for: '',
-                    // 接口与格式
-                    api_type: 'proxy',
-                    headers_list: [],
-                    body: '',
-                    body_type: 'none',
-                    // 访问控制
-                    is_public: false,
-                    // 代理配置
-                    proxy_mode: 'none',
-                    proxy: '',
-                    // 缓存
-                    cache_ttl: 0
-                });
-                const ruleTestResult = ref(null);
-                const ruleTesting = ref(false);
-                const copiedRuleId = ref(null);
-
-                // 代理管理相关状态
-                const proxyList = reactive([]);
-                const proxyStats = reactive({ total: 0, available: 0, strategy: 'round_robin' });
-                const proxyLoading = ref(false);
-                const newProxyText = ref('');
-
-                let refreshInterval = null, lastErrorToast = 0, errorMuteUntil = 0, eventSource = null, logEventSource = null;
-
-                const requestDistribution = computed(() => {
-                    const t = stats.requests?.total || 0, s = stats.requests?.success || 0, f = stats.requests?.failed || 0;
-                    return [
-                        { label: '成功', value: s, percentage: t > 0 ? Math.round(s / t * 100) : 0, color: '#10b981' },
-                        { label: '失败', value: f, percentage: t > 0 ? Math.round(f / t * 100) : 0, color: '#ef4444' },
-                    ];
-                });
-
-                const userOptions = computed(() => [...new Set([
-                    ...requestHistory.map(r => r.user || '未知'),
-                    ...apiUsers.map(u => u.user || '未知')
-                ])].filter(Boolean));
-
-                const filteredRequests = computed(() => {
-                    let list = requestHistory;
-                    if (requestUserFilter.value !== 'all') {
-                        list = list.filter(r => (r.user || '未知') === requestUserFilter.value);
-                    }
-                    if (!searchQuery.value) return list;
-                    const q = searchQuery.value.toLowerCase();
-                    return list.filter(r => r.url.toLowerCase().includes(q) || r.timestamp.includes(q));
-                });
-
-                const filteredLogs = computed(() => (logFilter.value === 'all' ? logs : logs.filter(l => l.level === logFilter.value)));
-                const filteredUserLogs = computed(() => (logFilter.value === 'all' ? userLogs : userLogs.filter(l => l.level === logFilter.value)));
-
-                const isAdmin = computed(() => status.current_user?.role === 'admin');
-                const visibleTabs = computed(() => tabs.filter(t => !t.adminOnly || isAdmin.value));
-                const currentTabName = computed(() => visibleTabs.value.find(t => t.id === activeTab.value)?.name);
-                const currentTabDesc = computed(() => visibleTabs.value.find(t => t.id === activeTab.value)?.desc);
-
-                const showToast = (msg, type = 'success') => {
-                    toast.message = msg; toast.type = type; toast.show = true;
-                    setTimeout(() => toast.show = false, 3500);
-                };
-
-                const notifyError = (msg) => {
-                    const now = Date.now();
-                    if (now < errorMuteUntil) return;
-                    if (now - lastErrorToast > 5000) {
-                        showToast(msg, 'error');
-                        lastErrorToast = now;
-                    }
-                };
-
-                const muteErrors = (ms = 60000) => {
-                    errorMuteUntil = Date.now() + ms;
-                    showToast(`错误提示已静音 ${ms / 1000} 秒`, 'info');
-                };
-
-                const buildUrl = (path) => {
-                    const base = apiBaseUrl.value.trim().replace(/\/$/, '');
-                    return `${base}${path.startsWith('/') ? path : '/' + path}`;
-                };
-
-                const api = async (path, opts = {}, timeoutMs = 10000) => {
-                    const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), timeoutMs);
-                    try {
-                        const res = await fetch(buildUrl(`/api/dashboard${path}`), {
-                            ...opts,
-                            signal: controller.signal,
-                            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
-                        });
-                        if (!res.ok) {
-                            const text = await res.text();
-                            throw new Error(text || `请求失败 (${res.status})`);
-                        }
-                        return res.json();
-                    } catch (e) {
-                        if (e.name === 'AbortError') throw new Error('请求超时，请检查网络或后端状态');
-                        throw e;
-                    } finally {
-                        clearTimeout(timer);
-                    }
-                };
-
-                const loadData = async () => {
-                    if (!authenticated.value) return;
-                    try {
-                        const userParam = requestUserFilter.value !== 'all' ? `&user=${encodeURIComponent(requestUserFilter.value)}` : '';
-                        const [s, st, c, ts, h, sys, bp, l] = await Promise.all([
-                            api('/status'), api('/stats'), api('/config'), api('/time-series'),
-                            api(`/history${requestUserFilter.value !== 'all' ? '?user=' + requestUserFilter.value : ''}`), api('/system'), api('/browser-pool'), api(`/logs?limit=200${userParam}`)
-                        ]);
-                        Object.assign(status, s); Object.assign(stats, st); Object.assign(config, c);
-                        timeSeries.splice(0, timeSeries.length, ...ts);
-                        requestHistory.splice(0, requestHistory.length, ...h);
-                        Object.assign(systemInfo, sys); Object.assign(browserPoolInfo, bp);
-                        logs.splice(0, logs.length, ...(l.all || []));
-                        userLogs.splice(0, userLogs.length, ...(l.user || []));
-
-                        if (isAdmin.value) await loadUsers();
-                    } catch (e) {
-                        if (e.message.includes('401')) {
-                            authenticated.value = false;
-                            clearInterval(refreshInterval);
-                            showToast('会话已过期', 'error');
-                        } else {
-                            notifyError(e.message || '请求失败，请检查网络或后端状态');
-                        }
-                    }
-                };
-
-                const stopPolling = () => {
-                    if (refreshInterval) {
-                        clearInterval(refreshInterval);
-                        refreshInterval = null;
-                    }
-                };
-
-                const startPolling = (notify = false) => {
-                    stopPolling();
-                    if (!autoRefresh.value) return;
-                    refreshInterval = setInterval(loadData, 4000);
-                    if (notify) showToast('SSE 断开，已回退轮询', 'error');
-                };
-
-                const applySnapshot = (data) => {
-                    if (!data) return;
-                    if (data.status) {
-                        const prevUser = status.current_user;
-                        Object.assign(status, data.status);
-                        if (!data.status.current_user && prevUser) status.current_user = prevUser;
-                    }
-                    if (data.stats) Object.assign(stats, data.stats);
-                    if (data.config) Object.assign(config, data.config);
-                    if (data.time_series) { timeSeries.splice(0, timeSeries.length, ...(data.time_series || [])); }
-                    if (data.history) { requestHistory.splice(0, requestHistory.length, ...(data.history || [])); }
-                    if (data.system) Object.assign(systemInfo, data.system);
-                    if (data.browser_pool) Object.assign(browserPoolInfo, data.browser_pool);
-                    if (data.logs) { logs.splice(0, logs.length, ...(data.logs || [])); }
-                };
-
-                const closeStream = () => {
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
-                    }
-                    sseConnected.value = false;
-                };
-
-                const closeLogStream = () => {
-                    if (logEventSource) {
-                        logEventSource.close();
-                        logEventSource = null;
-                    }
-                };
-
-                const connectLogStream = () => {
-                    if (activeTab.value !== 'logs' || !authenticated.value) return;
-                    if (typeof EventSource === 'undefined') return;
-                    closeLogStream();
-                    const userParam = requestUserFilter.value !== 'all' ? `&user=${encodeURIComponent(requestUserFilter.value)}` : '';
-                    const url = buildUrl(`/api/dashboard/logs/stream?key=${encodeURIComponent(apiKey.value)}${userParam}`);
-                    logEventSource = new EventSource(url);
-                    logEventSource.onmessage = (ev) => {
-                        try {
-                            const data = JSON.parse(ev.data);
-                            if (data.all) {
-                                logs.push(...data.all);
-                                if (logs.length > 400) logs.splice(0, logs.length - 400);
-                            }
-                            if (data.user) {
-                                userLogs.push(...data.user);
-                                if (userLogs.length > 400) userLogs.splice(0, userLogs.length - 400);
-                            }
-                        } catch (err) {
-                            console.error('Log SSE parse error', err);
-                        }
-                    };
-                    logEventSource.onerror = () => {
-                        closeLogStream();
-                        notifyError('日志流已断开，切换到轮询');
-                        loadData();
-                    };
-                };
-
-                const connectStream = () => {
-                    if (!autoRefresh.value || !authenticated.value) return;
-                    if (typeof EventSource === 'undefined') {
-                        startPolling();
-                        return;
-                    }
-                    closeStream();
-                    const url = buildUrl(`/api/dashboard/stream?key=${encodeURIComponent(apiKey.value)}`);
-                    eventSource = new EventSource(url);
-                    eventSource.onopen = () => {
-                        sseConnected.value = true;
-                        stopPolling(); // SSE 已连接，暂停轮询
-                    };
-                    eventSource.onmessage = (ev) => {
-                        try {
-                            const data = JSON.parse(ev.data);
-                            applySnapshot(data);
-                        } catch (err) {
-                            console.error('SSE parse error', err);
-                        }
-                    };
-                    eventSource.onerror = () => {
-                        sseConnected.value = false;
-                        closeStream();
-                        startPolling(true);
-                    };
-                };
-
-                const login = async () => {
-                    loading.value = true; loginError.value = '';
-                    try {
-                        const s = await api('/status');
-                        Object.assign(status, s);
-                        if (status.current_user?.role !== 'admin') {
-                            loginError.value = '非管理员无权访问控制台';
-                            authenticated.value = false;
-                            return;
-                        }
-                        authenticated.value = true;
-                        localStorage.setItem('apiKey', apiKey.value);
-                        await loadData();
-                        connectStream();
-                        connectLogStream();
-                        if (!sseConnected.value) startPolling();
-                        showToast('欢迎回来！', 'success');
-                    } catch (e) { loginError.value = 'API 密钥无效'; }
-                    finally { loading.value = false; }
-                };
-
-                const logout = () => {
-                    authenticated.value = false; apiKey.value = '';
-                    localStorage.removeItem('apiKey');
-                    localStorage.removeItem('activeTab');
-                    closeStream();
-                    closeLogStream();
-                    stopPolling();
-                    showToast('已退出登录', 'info');
-                };
-
-                const switchTab = (tabId) => {
-                    const allowed = visibleTabs.value.find(t => t.id === tabId);
-                    activeTab.value = allowed ? tabId : 'monitor';
-                    localStorage.setItem('activeTab', activeTab.value);
-                };
-
-                const saveBaseUrl = () => {
-                    const norm = apiBaseUrl.value.trim().replace(/\/$/, '');
-                    apiBaseUrl.value = norm;
-                    localStorage.setItem('apiBaseUrl', norm);
-                    showToast('后端地址已保存', 'success');
-                    if (authenticated.value) loadData();
-                };
-
-                const toggleAutoRefresh = () => {
-                    autoRefresh.value = !autoRefresh.value;
-                    if (!autoRefresh.value) {
-                        closeStream(); stopPolling();
-                        showToast('自动刷新已暂停', 'info');
-                        return;
-                    }
-                    loadData();
-                    connectStream();
-                    if (!sseConnected.value) startPolling();
-                    showToast(autoRefresh.value ? '自动刷新已开启' : '自动刷新已暂停', 'info');
-                };
-
-                const loadUsers = async () => {
-                    if (!isAdmin.value) { apiUsers.splice(0, apiUsers.length); return; }
-                    userLoading.value = true;
-                    try {
-                        const res = await api('/users');
-                        apiUsers.splice(0, apiUsers.length, ...(res.users || []));
-                    } catch (e) { notifyError(e.message || '获取用户列表失败'); }
-                    finally { userLoading.value = false; }
-                };
-
-                const createUser = async () => {
-                    if (!newUserName.value.trim()) { showToast('请输入用户名', 'error'); return; }
-                    userLoading.value = true;
-                    try {
-                        const res = await api('/users', { method: 'POST', body: JSON.stringify({ user: newUserName.value.trim(), role: newUserRole.value }) });
-                        showToast('用户创建成功', 'success');
-                        newUserName.value = ''; newUserRole.value = 'user';
-                        apiUsers.push(res.user);
-                    } catch (e) { notifyError(e.message || '创建用户失败'); }
-                    finally { userLoading.value = false; }
-                };
-
-                const deleteUser = async (user) => {
-                    if (!confirm(`确定删除用户 ${user.user}?`)) return;
-                    try {
-                        await api(`/users/${encodeURIComponent(user.user)}`, { method: 'DELETE' });
-                        const idx = apiUsers.findIndex(u => u.user === user.user);
-                        if (idx >= 0) apiUsers.splice(idx, 1);
-                        showToast('用户已删除', 'success');
-                    } catch (e) { notifyError(e.message || '删除用户失败'); }
-                };
-
-                const rotateUser = async (user) => {
-                    rotatingUser.value = user.user;
-                    try {
-                        const res = await api(`/users/${encodeURIComponent(user.user)}/rotate`, { method: 'POST' });
-                        const idx = apiUsers.findIndex(u => u.user === user.user);
-                        if (idx >= 0) apiUsers[idx].key = res.user.key;
-                        showToast('密钥已重置', 'success');
-                    } catch (e) { notifyError(e.message || '重置密钥失败'); }
-                    finally { rotatingUser.value = ''; }
-                };
-
-                // ========== 规则管理函数 ==========
-                const rulesApi = async (path, opts = {}, timeoutMs = 10000) => {
-                    const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), timeoutMs);
-                    try {
-                        const res = await fetch(buildUrl(`/v1${path}`), {
-                            ...opts,
-                            signal: controller.signal,
-                            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey.value, ...opts.headers }
-                        });
-                        if (!res.ok) {
-                            const text = await res.text();
-                            throw new Error(text || `请求失败 (${res.status})`);
-                        }
-                        return res.json();
-                    } catch (e) {
-                        if (e.name === 'AbortError') throw new Error('请求超时');
-                        throw e;
-                    } finally {
-                        clearTimeout(timer);
-                    }
-                };
-
-                const loadRules = async () => {
-                    rulesLoading.value = true;
-                    try {
-                        const res = await rulesApi('/rules');
-                        rules.splice(0, rules.length, ...(res.rules || []));
-                    } catch (e) { notifyError(e.message || '获取规则列表失败'); }
-                    finally { rulesLoading.value = false; }
-                };
-
-                const resetRuleForm = () => {
-                    ruleForm.name = '';
-                    ruleForm.target_url = '';
-                    ruleForm.method = 'GET';
-                    ruleForm.mode = 'cookie';
-                    ruleForm.selectors = [];
-                    ruleForm.wait_for = '';
-                    ruleForm.api_type = 'proxy';
-                    ruleForm.headers_list = [];
-                    ruleForm.body = '';
-                    ruleForm.body_type = 'none';
-                    ruleForm.is_public = false;
-                    ruleForm.proxy_mode = 'none';
-                    ruleForm.proxy = '';
-                    ruleForm.cache_ttl = 0;
-                    editingRule.value = null;
-                    ruleTestResult.value = null;
-                };
-
-                const openRuleForm = (rule = null) => {
-                    resetRuleForm();
-                    if (rule) {
-                        editingRule.value = rule.id;
-                        ruleForm.name = rule.name || '';
-                        ruleForm.target_url = rule.target_url || '';
-                        // 所有字段使用严格判断，避免默认值覆盖实际值
-                        ruleForm.method = rule.method !== undefined ? rule.method : 'GET';
-                        ruleForm.mode = rule.mode !== undefined ? rule.mode : 'cookie';
-                        ruleForm.selectors = Object.entries(rule.selectors || {}).map(([k, v]) => ({ key: k, selector: v }));
-                        ruleForm.wait_for = rule.wait_for || '';
-                        ruleForm.api_type = rule.api_type !== undefined ? rule.api_type : 'proxy';
-                        // headers 需要特殊处理，确保是数组
-                        const headersObj = rule.headers || {};
-                        ruleForm.headers_list = Object.keys(headersObj).length > 0
-                            ? Object.entries(headersObj).map(([k, v]) => ({ key: k, value: v }))
-                            : [];
-                        ruleForm.body = rule.body !== undefined && rule.body !== null ? rule.body : '';
-                        ruleForm.body_type = rule.body_type !== undefined ? rule.body_type : 'none';
-                        ruleForm.is_public = rule.is_public === true;
-                        ruleForm.proxy_mode = rule.proxy_mode !== undefined ? rule.proxy_mode : 'none';
-                        ruleForm.proxy = rule.proxy !== undefined && rule.proxy !== null ? rule.proxy : '';
-                        ruleForm.cache_ttl = rule.cache_ttl !== undefined ? rule.cache_ttl : 0;
-                    }
-                    showRuleForm.value = true;
-                };
-
-                const addSelector = () => {
-                    ruleForm.selectors.push({ key: '', selector: '' });
-                };
-
-                const removeSelector = (index) => {
-                    ruleForm.selectors.splice(index, 1);
-                };
-
-                const addHeader = () => {
-                    ruleForm.headers_list.push({ key: '', value: '' });
-                };
-
-                const removeHeader = (index) => {
-                    ruleForm.headers_list.splice(index, 1);
-                };
-
-                const saveRule = async () => {
-                    if (!ruleForm.target_url.trim()) {
-                        showToast('请输入目标 URL', 'error');
-                        return;
-                    }
-                    rulesLoading.value = true;
-                    try {
-                        const selectors = {};
-                        ruleForm.selectors.forEach(s => {
-                            if (s.key.trim() && s.selector.trim()) {
-                                selectors[s.key.trim()] = s.selector.trim();
-                            }
-                        });
-                        const headers = {};
-                        ruleForm.headers_list.forEach(h => {
-                            if (h.key.trim() && h.value.trim()) {
-                                headers[h.key.trim()] = h.value.trim();
-                            }
-                        });
-                        const payload = {
-                            name: ruleForm.name.trim() || '未命名规则',
-                            target_url: ruleForm.target_url.trim(),
-                            method: ruleForm.method,
-                            mode: ruleForm.mode,
-                            selectors: selectors,
-                            wait_for: ruleForm.wait_for.trim() || null,
-                            api_type: ruleForm.api_type,
-                            headers: headers,
-                            body: ruleForm.body.trim() || null,
-                            body_type: ruleForm.body_type,
-                            is_public: ruleForm.is_public,
-                            proxy_mode: ruleForm.proxy_mode,
-                            proxy: ruleForm.proxy_mode === 'fixed' ? ruleForm.proxy.trim() : null,
-                            cache_ttl: ruleForm.cache_ttl
-                        };
-                        if (editingRule.value) {
-                            payload.id = editingRule.value;
-                        }
-                        const res = await rulesApi('/rules', { method: 'POST', body: JSON.stringify(payload) });
-                        showToast(`规则已${editingRule.value ? '更新' : '创建'}，Permlink: /v1/run/${res.id}`, 'success');
-                        showRuleForm.value = false;
-                        resetRuleForm();
-                        await loadRules();
-                    } catch (e) { notifyError(e.message || '保存规则失败'); }
-                    finally { rulesLoading.value = false; }
-                };
-
-                const deleteRule = async (rule) => {
-                    if (!confirm(`确定删除规则 "${rule.name}"?`)) return;
-                    try {
-                        await rulesApi(`/rules/${rule.id}`, { method: 'DELETE' });
-                        const idx = rules.findIndex(r => r.id === rule.id);
-                        if (idx >= 0) rules.splice(idx, 1);
-                        showToast('规则已删除', 'success');
-                    } catch (e) { notifyError(e.message || '删除规则失败'); }
-                };
-
-                const testRule = async (rule) => {
-                    ruleTesting.value = true;
-                    ruleTestResult.value = null;
-                    try {
-                        const res = await fetch(buildUrl(`/v1/run/${rule.id}`), {
-                            headers: { 'X-API-KEY': apiKey.value }
-                        });
-                        ruleTestResult.value = await res.json();
-                        showToast('规则测试完成', 'success');
-                    } catch (e) {
-                        ruleTestResult.value = { error: e.message };
-                        showToast('规则测试失败', 'error');
-                    } finally { ruleTesting.value = false; }
-                };
-
-                const copyPermlink = async (rule) => {
-                    const url = `${apiBaseUrl.value || window.location.origin}/v1/run/${rule.id}`;
-                    try {
-                        await navigator.clipboard.writeText(url);
-                        copiedRuleId.value = rule.id;
-                        showToast('Permlink 已复制到剪贴板', 'success');
-                        setTimeout(() => { copiedRuleId.value = null; }, 2000);
-                    } catch (e) {
-                        showToast('复制失败，请手动复制', 'error');
-                    }
-                };
-
-                const formatRuleTime = (timestamp) => {
-                    if (!timestamp) return '-';
-                    const d = new Date(timestamp * 1000);
-                    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-                };
-
-                // ========== 代理管理函数 ==========
-                const loadProxies = async () => {
-                    proxyLoading.value = true;
-                    try {
-                        const res = await api('/proxies');
-                        proxyList.splice(0, proxyList.length, ...(res.proxies || []));
-                        proxyStats.total = res.total || 0;
-                        proxyStats.available = res.available || 0;
-                        proxyStats.strategy = res.strategy || 'round_robin';
-                    } catch (e) { notifyError(e.message || '获取代理列表失败'); }
-                    finally { proxyLoading.value = false; }
-                };
-
-                const addProxies = async () => {
-                    const lines = newProxyText.value.trim().split('\n').filter(l => l.trim());
-                    if (lines.length === 0) {
-                        showToast('请输入代理地址', 'error');
-                        return;
-                    }
-                    proxyLoading.value = true;
-                    try {
-                        await api('/proxies', { method: 'POST', body: JSON.stringify({ proxies: lines }) });
-                        showToast(`已添加 ${lines.length} 个代理`, 'success');
-                        newProxyText.value = '';
-                        await loadProxies();
-                    } catch (e) { notifyError(e.message || '添加代理失败'); }
-                    finally { proxyLoading.value = false; }
-                };
-
-                const removeProxy = async (proxy) => {
-                    try {
-                        await api('/proxies', { method: 'DELETE', body: JSON.stringify({ proxy }) });
-                        const idx = proxyList.findIndex(p => p.address === proxy);
-                        if (idx >= 0) proxyList.splice(idx, 1);
-                        showToast('代理已删除', 'success');
-                    } catch (e) { notifyError(e.message || '删除代理失败'); }
-                };
-
-                const reloadProxies = async () => {
-                    proxyLoading.value = true;
-                    try {
-                        await api('/proxies/reload', { method: 'POST' });
-                        showToast('代理列表已重新加载', 'success');
-                        await loadProxies();
-                    } catch (e) { notifyError(e.message || '重新加载失败'); }
-                    finally { proxyLoading.value = false; }
-                };
-
-                const saveConfig = async () => {
-                    saving.value = true;
-                    try {
-                        await api('/config', { method: 'PUT', body: JSON.stringify(config) });
-                        showToast('配置保存成功', 'success');
-                    } catch (e) { showToast(e.message, 'error'); }
-                    finally { saving.value = false; }
-                };
-
-                const clearAllCache = async () => {
-                    if (!confirm('确定要清空所有缓存吗？')) return;
-                    try {
-                        await api('/cache/clear', { method: 'POST' });
-                        showToast('缓存清空成功', 'success');
-                        loadData();
-                    } catch (e) { showToast(e.message, 'error'); }
-                };
-
-                const restartBrowserPool = async () => {
-                    if (!confirm('确定要重启浏览器池吗？')) return;
-                    try {
-                        await api('/browser-pool/restart', { method: 'POST' });
-                        showToast('浏览器池重启中...', 'info');
-                        setTimeout(loadData, 2000);
-                    } catch (e) { showToast(e.message, 'error'); }
-                };
-
-                const testBypass = async () => {
-                    testing.value = true; testResult.value = null;
-                    try {
-                        testResult.value = await api('/test', { method: 'POST', body: JSON.stringify({ url: testUrl.value }) }, 60000);
-                        showToast(testResult.value.success ? '测试通过！' : '测试失败', testResult.value.success ? 'success' : 'error');
-                    } catch (e) {
-                        testResult.value = { success: false, error: e.message };
-                        showToast('测试失败', 'error');
-                    } finally { testing.value = false; }
-                };
-
-                const batchTestBypass = async () => {
-                    const urls = batchTestUrls.value.split('\n').filter(u => u.trim());
-                    if (!urls.length) { showToast('请至少输入一个 URL', 'error'); return; }
-                    batchTesting.value = true; batchProgress.value = 0;
-                    try {
-                        // 分批次处理，前端分片，避免单次过长
-                        const chunkSize = 3;
-                        const allResults = [];
-                        for (let i = 0; i < urls.length; i += chunkSize) {
-                            const chunk = urls.slice(i, i + chunkSize);
-                            const res = await api('/test/batch', { method: 'POST', body: JSON.stringify({ urls: chunk }) }, 60000);
-                            allResults.push(...res.results);
-                            batchProgress.value = Math.round(((i + chunk.length) / urls.length) * 100);
-                        }
-                        const success = allResults.filter(r => r.success).length;
-                        batchTestResults.value = { total: allResults.length, success, failed: allResults.length - success, results: allResults };
-                        showToast(`批量测试完成: ${batchTestResults.value.success}/${batchTestResults.value.total} 通过`, 'success');
-                    } catch (e) { showToast(e.message, 'error'); }
-                    finally { batchTesting.value = false; }
-                };
-
-                const exportConfig = () => {
-                    const a = document.createElement('a');
-                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
-                    a.download = "gateway-config.json"; a.click();
-                    showToast('配置已导出', 'success');
-                };
-
-                const exportRequests = () => {
-                    const csv = [['状态', 'URL', '延迟 (ms)', '时间戳'],
-                    ...requestHistory.map(r => [r.success ? '成功' : '失败', r.url, r.duration_ms, r.timestamp])
-                    ].map(row => row.join(',')).join('\n');
-                    const a = document.createElement('a');
-                    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-                    a.download = "requests-export.csv"; a.click();
-                    showToast('请求数据已导出', 'success');
-                };
-
-                const exportLogs = () => {
-                    const txt = filteredLogs.value.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
-                    const a = document.createElement('a');
-                    a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
-                    a.download = "system-logs.txt"; a.click();
-                    showToast('日志已导出', 'success');
-                };
-
-                const clearLogs = () => {
-                    if (!confirm('确定要清空所有日志吗？')) return;
-                    logs.splice(0, logs.length);
-                    showToast('日志已清空', 'success');
-                };
-
-                const applyPreset = (preset) => {
-                    const p = {
-                        development: { browser_pool_min: 1, browser_pool_max: 3, browser_pool_idle_timeout: 60, memory_limit_mb: 512, cookie_expire_seconds: 300, fingerprint_enabled: true },
-                        production: { browser_pool_min: 3, browser_pool_max: 10, browser_pool_idle_timeout: 300, memory_limit_mb: 2048, cookie_expire_seconds: 1800, fingerprint_enabled: true },
-                        conservative: { browser_pool_min: 1, browser_pool_max: 2, browser_pool_idle_timeout: 30, memory_limit_mb: 256, cookie_expire_seconds: 600, fingerprint_enabled: false }
-                    };
-                    Object.assign(config, p[preset]);
-                    const n = { development: '开发环境', production: '生产环境', conservative: '保守模式' };
-                    showToast(`${n[preset]}预设已应用`, 'success');
-                };
-
-                const formatBytes = (b) => {
-                    if (!b) return '0 B';
-                    const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
-                    const i = Math.floor(Math.log(b) / Math.log(k));
-                    return Math.round(b / Math.pow(k, i) * 100) / 100 + ' ' + s[i];
-                };
-
-                // 监听 activeTab 变化，保存到 localStorage & 控制日志流
-                watch(activeTab, (newTab) => {
-                    localStorage.setItem('activeTab', newTab);
-                    if (newTab === 'logs') {
-                        connectLogStream();
-                    } else {
-                        closeLogStream();
-                    }
-                    // 切换到规则页面时加载规则列表
-                    if (newTab === 'rules') {
-                        loadRules();
-                    }
-                    // 切换到代理页面时加载代理列表
-                    if (newTab === 'proxies') {
-                        loadProxies();
-                    }
-                });
-
-                watch(requestUserFilter, () => {
-                    if (activeTab.value === 'logs') {
-                        logs.splice(0, logs.length);
-                        connectLogStream();
-                    }
-                    loadData();
-                });
-
-                onMounted(() => {
-                    document.getElementById('init-loader').style.display = 'none';
-
-                    const savedBase = localStorage.getItem('apiBaseUrl');
-                    if (savedBase) apiBaseUrl.value = savedBase;
-
-                    // 恢复上次的标签页
-                    const savedTab = localStorage.getItem('activeTab');
-                    if (savedTab && visibleTabs.value.find(t => t.id === savedTab)) {
-                        activeTab.value = savedTab;
-                    }
-
-                    const k = localStorage.getItem('apiKey');
-                    if (k) { apiKey.value = k; login(); }
-                });
-
-                onUnmounted(() => { closeStream(); closeLogStream(); stopPolling(); });
-
-                return {
-                    authenticated, apiKey, apiBaseUrl, autoRefresh, sseConnected, loading, loginError, activeTab, tabs, visibleTabs, currentTabName, currentTabDesc,
-                    status, stats, config, timeSeries, requestHistory, systemInfo, browserPoolInfo, requestUserFilter, userOptions, apiUsers, isAdmin,
-                    toast, saving, testing, testUrl, testResult, quickTestParams, batchTesting, batchTestUrls, batchTestResults, batchProgress, newUserName, newUserRole, userLoading, rotatingUser,
-                    selectedRequest, searchQuery, logs, userLogs, logFilter, filteredLogs, filteredUserLogs, requestDistribution, filteredRequests,
-                    // 规则配置相关
-                    rules, rulesLoading, showRuleForm, editingRule, ruleForm, ruleTestResult, ruleTesting, copiedRuleId,
-                    loadRules, openRuleForm, saveRule, deleteRule, testRule, copyPermlink, addSelector, removeSelector, addHeader, removeHeader, formatRuleTime,
-                    // 代理管理相关
-                    proxyList, proxyStats, proxyLoading, newProxyText,
-                    loadProxies, addProxies, removeProxy, reloadProxies,
-                    login, logout, switchTab, loadData, showRequestDetail: (r) => selectedRequest.value = r,
-                    exportRequests, exportLogs, clearLogs, clearAllCache, restartBrowserPool,
-                    testBypass, batchTestBypass, exportConfig, applyPreset, saveConfig, formatBytes,
-                    saveBaseUrl, toggleAutoRefresh, muteErrors,
-                    loadUsers, createUser, deleteUser, rotateUser
-                };
-            }
-        }).component('line-chart', LineChart).component('donut-chart', DonutChart).mount('#app');
-    </script>
+    <!-- Toast -->
+    <div v-if="toast.show" class="fixed bottom-6 right-6 z-50">
+        <div :class="['px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium border backdrop-blur-md',
+            toast.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+            toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
+            'bg-blue-50 text-blue-700 border-blue-200']">
+            <i
+                :class="toast.type === 'success' ? 'ri-checkbox-circle-fill text-xl' : toast.type === 'error' ? 'ri-error-warning-fill text-xl' : 'ri-information-fill text-xl'"></i>
+            {{ toast.message }}
+        </div>
+    </div>
+    </div>
+    <script src="/static/app.js"></script>
 </body>
 
 </html>

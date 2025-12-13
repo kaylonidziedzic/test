@@ -86,6 +86,8 @@ class CookieFetcher(BaseFetcher):
             use_proxy = proxy or proxy_manager.get_proxy()
             if use_proxy:
                 log.info(f"[{self.name}] 使用代理: {use_proxy}")
+            else:
+                log.info(f"[{self.name}] 不使用代理 (直连)")
 
             # 4. 发起请求
             log.info(f"[{self.name}] 发起请求: {url} (尝试 {attempt + 1}/{self.retries + 1})")
@@ -217,17 +219,24 @@ class CookieFetcher(BaseFetcher):
 
     def _is_blocked(self, resp: FetchResponse) -> bool:
         """检查响应是否被 Cloudflare 或其他反爬机制拦截"""
+        log.info(f"[{self.name}] 检查拦截: status={resp.status_code}, content_length={len(resp.text)}")
+
         # 1. 检查状态码
         if resp.status_code in [403, 503, 429]:
+            log.warning(f"[{self.name}] 状态码 {resp.status_code} 表示被拦截")
             # Cloudflare 特征
             if "Just a moment" in resp.text or "Cloudflare" in resp.text:
+                log.warning(f"[{self.name}] 检测到 Cloudflare 拦截页面")
                 return True
             # 通用拦截特征
             if "cf-ray" in resp.headers.get("cf-ray", "").lower():
                 return True
+            # 即使没有明确特征，403/503/429 也视为拦截
+            return True
 
         # 2. 检查响应头中的 Cloudflare 标记
         if resp.headers.get("cf-mitigated") == "challenge":
+            log.warning(f"[{self.name}] 检测到 cf-mitigated=challenge 响应头")
             return True
 
         # 3. 检查页面内容特征（即使状态码是 200）
@@ -245,4 +254,5 @@ class CookieFetcher(BaseFetcher):
                     log.warning(f"[{self.name}] 检测到拦截特征: {pattern}")
                     return True
 
+        log.info(f"[{self.name}] 未检测到拦截特征，请求成功")
         return False

@@ -22,8 +22,8 @@ def _get_current_user(request: Request) -> tuple:
     if not api_key:
         return None, False
 
-    from services.api_key_store import api_key_store
-    user = api_key_store.get_user_by_key(api_key)
+    from services.api_key_store import find_user_by_key
+    user = find_user_by_key(api_key)
     if user:
         return user.get("user"), user.get("role") == "admin"
     return None, False
@@ -80,165 +80,15 @@ def _check_access(rule: ScrapeConfig, request: Request):
         raise HTTPException(status_code=401, detail="此规则需要 API Key 访问")
 
     # 验证 API Key（简单验证，实际应调用 verify_api_key）
-    from services.api_key_store import api_key_store
-    user = api_key_store.get_user_by_key(api_key)
+    from services.api_key_store import find_user_by_key
+    user = find_user_by_key(api_key)
     if not user:
         raise HTTPException(status_code=401, detail="无效的 API Key")
 
 
-def _get_proxy_for_rule(rule: ScrapeConfig) -> Optional[str]:
-    """根据规则配置获取代理"""
-    proxy_mode = getattr(rule, "proxy_mode", "none")
+from services.execution_service import execute_rule_proxy, execute_rule_raw, execute_rule_reader
 
-    if proxy_mode == "none":
-        return None
-    elif proxy_mode == "pool":
-        # 从 IP 池获取
-        return proxy_manager.get_proxy()
-    elif proxy_mode == "fixed":
-        return rule.proxy
-    return None
-
-
-def _execute_proxy(rule: ScrapeConfig) -> Dict[str, Any]:
-    """执行 proxy 类型请求，返回 JSON"""
-    # 构建请求参数
-    request_data = None
-    request_json = None
-
-    if rule.body and rule.body_type != "none":
-        if rule.body_type == "json":
-            try:
-                request_json = json.loads(rule.body)
-            except:
-                request_data = rule.body
-        elif rule.body_type == "form":
-            # 解析 form 数据
-            request_data = dict(x.split("=") for x in rule.body.split("&") if "=" in x)
-        else:
-            request_data = rule.body
-
-    # 获取代理
-    proxy = _get_proxy_for_rule(rule)
-
-    resp = proxy_request(
-        url=rule.target_url,
-        method=rule.method,
-        headers=rule.headers or None,
-        data=request_data,
-        json=request_json,
-        fetcher=rule.mode if rule.mode in ["cookie", "browser"] else "cookie",
-        proxy=proxy
-    )
-
-    # 获取响应内容
-    html_content = ""
-    status_code = 200
-    resp_headers = {}
-    cookies = {}
-
-    if hasattr(resp, "text"):
-        html_content = resp.text
-        status_code = getattr(resp, "status_code", 200)
-        resp_headers = dict(getattr(resp, "headers", {}))
-        cookies = getattr(resp, "cookies", {})
-        if hasattr(cookies, "get_dict"):
-            cookies = cookies.get_dict()
-    elif isinstance(resp, dict):
-        html_content = resp.get("text", "")
-        status_code = resp.get("status_code", 200)
-
-    # 数据提取
-    data = {}
-    if rule.selectors:
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html_content, "html.parser")
-
-            for key, selector in rule.selectors.items():
-                elements = soup.select(selector)
-                if not elements:
-                    data[key] = None
-                else:
-                    data[key] = elements[0].get_text(strip=True)
-        except ImportError:
-            data["_error"] = "BeautifulSoup not installed"
-        except Exception as e:
-            data["_error"] = str(e)
-
-    return {
-        "meta": {
-            "rule_id": rule.id,
-            "name": rule.name,
-            "target": rule.target_url,
-            "api_type": rule.api_type
-        },
-        "status": status_code,
-        "data": data,
-        "text": html_content if not rule.selectors else None,
-        "headers": resp_headers,
-        "cookies": cookies,
-        "raw_length": len(html_content)
-    }
-
-
-def _execute_raw(rule: ScrapeConfig) -> Response:
-    """执行 raw 类型请求，返回原始内容"""
-    request_data = None
-    if rule.body and rule.body_type != "none":
-        request_data = rule.body
-
-    proxy = _get_proxy_for_rule(rule)
-
-    resp = proxy_request(
-        url=rule.target_url,
-        method=rule.method,
-        headers=rule.headers or None,
-        data=request_data,
-        fetcher=rule.mode if rule.mode in ["cookie", "browser"] else "cookie",
-        proxy=proxy
-    )
-
-    content = b""
-    content_type = "application/octet-stream"
-    status_code = 200
-
-    if hasattr(resp, "content"):
-        content = resp.content
-        content_type = resp.headers.get("content-type", "application/octet-stream")
-        status_code = resp.status_code
-
-    return Response(
-        content=content,
-        status_code=status_code,
-        media_type=content_type
-    )
-
-
-def _execute_reader(rule: ScrapeConfig) -> HTMLResponse:
-    """执行 reader 类型请求，返回阅读模式 HTML"""
-    request_data = None
-    if rule.body and rule.body_type != "none":
-        request_data = rule.body
-
-    proxy = _get_proxy_for_rule(rule)
-
-    resp = proxy_request(
-        url=rule.target_url,
-        method=rule.method,
-        headers=rule.headers or None,
-        data=request_data,
-        fetcher=rule.mode if rule.mode in ["cookie", "browser"] else "cookie",
-        proxy=proxy
-    )
-
-    html_content = ""
-    if hasattr(resp, "text"):
-        html_content = resp.text
-    elif isinstance(resp, dict):
-        html_content = resp.get("text", "")
-
-    return HTMLResponse(content=html_content)
+# Execution logic moved to services/execution_service.py
 
 
 @router.get("/run/{rule_id}", summary="执行爬虫规则")
@@ -260,11 +110,11 @@ def run_rule(rule_id: str, request: Request):
         api_type = getattr(rule, "api_type", "proxy")
 
         if api_type == "raw":
-            return _execute_raw(rule)
+            return execute_rule_raw(rule)
         elif api_type == "reader":
-            return _execute_reader(rule)
+            return execute_rule_reader(rule)
         else:  # proxy (默认)
-            return _execute_proxy(rule)
+            return execute_rule_proxy(rule)
 
     except HTTPException:
         raise

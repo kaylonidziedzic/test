@@ -15,6 +15,7 @@ from config import settings
 from core.browser_pool import browser_pool
 from routers import dashboard, health, proxy, raw, reader, job, runner
 from services.cache_service import credential_cache
+from services import config_store
 
 from utils.logger import log
 
@@ -56,7 +57,10 @@ async def watchdog_task():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    # 启动时
+    # 启动时：加载持久化配置
+    log.info("[Startup] 加载持久化配置...")
+    config_store.init_config()
+
     log.info("[Startup] 启动看门狗任务...")
     task = asyncio.create_task(watchdog_task())
 

@@ -1,86 +1,127 @@
-# 项目进度
+# Progress Log
 
-## 当前版本功能
+## 2024-12-13 已修复的问题
 
-### 1. 规则配置系统 (零代码平台核心)
-- **规则创建/编辑/删除** - 完整 CRUD
-- **Permlink 生成** - 保存规则后自动生成 `/v1/run/{id}` 链接
-- **用户权限隔离** - 普通用户只能看到自己的规则，管理员可看所有
+### 1. 前端 SyntaxError (已修复)
+- **问题**: `index.html:296-297` 中 `split(' ')` 字符串被换行，导致 Vue 模板编译错误
+- **修复**: 将换行的字符串改为单行
 
-#### 规则配置项
-| 配置项 | 说明 | 状态 |
-|--------|------|------|
-| 接口类型 | proxy(JSON) / raw(原始) / reader(阅读模式) | ✅ |
-| 请求方式 | GET / POST | ✅ |
-| 采集模式 | cookie(复用) / browser(直读) | ✅ |
-| 访问控制 | 私有(需Key) / 公开(无需认证) | ✅ |
-| 代理模式 | none / pool(IP池) / fixed(指定IP) | ✅ |
-| POST 请求体 | none / json / form / raw | ✅ |
-| 自定义请求头 | 支持多个 Header | ✅ |
-| CSS 选择器 | 数据提取规则 | ✅ |
+### 2. 添加规则 500 错误 (已修复)
+- **问题**: `routers/runner.py` 中 `from services.api_key_store import api_key_store` 导入错误
+- **修复**: 改为 `from services.api_key_store import find_user_by_key`
 
-### 2. 快速测试 (已合并到规则配置页)
-- 输入 URL 快速测试采集效果
-- 支持选择：接口类型、采集模式、代理模式
-- 显示测试结果（成功/失败、耗时、Cookies 数量等）
+### 3. SSE applySnapshot 错误 (已修复)
+- **问题**: `app.js:280` 中 spread 语法遇到非数组类型报错
+- **修复**: 使用 `Array.isArray()` 检查后再 spread
 
-### 3. 代理管理
-- 查看代理统计（总数、可用数、轮换策略）
-- 添加/删除代理
-- 从文件重新加载代理列表
-- 支持 http/https/socks5 协议
+### 4. 规则测试显示失败 (已修复)
+- **问题**: `reader` 类型规则返回 HTML，前端调用 `res.json()` 解析失败
+- **修复**: 前端根据 `Content-Type` 判断响应类型，HTML 响应显示内容长度和预览
 
-### 4. 异步任务队列
-- 基于 ARQ + Redis
-- `POST /v1/jobs/` - 提交异步任务
-- `GET /v1/jobs/{job_id}` - 查询任务状态
-
-### 5. 多用户权限系统
-- API Key 认证
-- 用户角色：admin / user
-- Dashboard SSE 实时推送
+### 5. Cookie 复用自动降级 (已修复)
+- **问题**: 显式指定 `fetcher=cookie` 时 `use_fallback=False`，被拦截不会降级
+- **修复**: `proxy_service.py` 中 cookie 模式仍支持自动降级
 
 ---
 
-## 已知问题
+## Cookie 复用状态
 
-### 待修复
-1. **规则编辑显示旧值** - 部分字段（POST请求体、代理配置、自定义请求头）编辑时可能显示旧值
-   - 原因：前端 `openRuleForm` 函数对某些字段的处理不够严格
-   - 状态：已修复，待验证
-
-2. **被拦截问题** - 某些网站 CookieFetcher 重试后仍被拦截
-   - 原因：网站反爬机制，非代码问题
-   - 建议：更换代理或使用浏览器直读模式
-
-### 待优化
-1. 快速测试的参数目前未传递到后端（需要修改 `testBypass` 函数）
-2. 批量测试功能已移除，如需要可重新添加
-
----
-
-## 文件结构
-
+### 无代理模式 (已验证正常)
 ```
-├── routers/
-│   ├── runner.py      # 规则执行 API
-│   ├── job.py         # 异步任务 API
-│   └── dashboard.py   # Dashboard API
-├── services/
-│   ├── rule_service.py    # 规则服务 (Redis 存储)
-│   ├── proxy_manager.py   # 代理管理
-│   ├── job_queue.py       # ARQ Worker
-│   └── proxy_service.py   # 请求调度
-├── static/
-│   └── index.html     # 前端 Dashboard (Vue 3)
-└── docker-compose.yml # Redis + Worker 配置
+[CookieFetcher] 不使用代理 (直连)
+[CookieFetcher] 发起请求: https://www.69shuba.com/txt/90442/40956667 (尝试 1/2)
+[CookieFetcher] 检查拦截: status=200, content_length=9399
+[CookieFetcher] 未检测到拦截特征，请求成功
 ```
 
+### 使用代理模式 (存在问题)
+
+**问题描述**: 当规则配置使用代理时，Cookie 复用失败，被迫降级到浏览器直出。
+
+**根本原因**: 代理 IP 不一致
+```
+问题链:
+1. 规则配置使用代理 (proxy_mode=pool 或 fixed)
+2. browser_pool.py 创建浏览器时从 proxy_manager.get_proxy() 获取代理
+3. 浏览器过盾时使用代理 A 获取 cf_clearance Cookie
+4. CookieFetcher 请求时可能使用代理 B (如果代理池有多个 IP)
+5. 或者 CookieFetcher 使用的代理与浏览器不同
+6. Cloudflare 检测到请求 IP 与 Cookie 获取时的 IP 不一致
+7. 返回 403 拦截
+```
+
+**当前行为**:
+- Cookie 复用失败后自动降级到 BrowserFetcher
+- BrowserFetcher 直接使用浏览器获取内容，可以成功
+- 但性能较差，每次请求都需要浏览器渲染
+
 ---
 
-## 下一步计划
+## IP 代理池架构问题 (待优化)
 
-1. 验证规则编辑显示旧值问题是否修复
-2. 快速测试参数传递到后端
-3. 规则缓存功能实现 (cache_ttl)
-4. 规则执行统计（成功/失败次数）
+### 当前架构缺陷
+```
+规则配置代理 (proxy_mode)
+    │
+    ├── none: 不使用代理 → CookieFetcher 直连 ✓ 正常
+    ├── pool: 从 proxy_manager 获取 → 可能与浏览器代理不一致 ✗
+    └── fixed: 使用规则指定的 proxy → 可能与浏览器代理不一致 ✗
+
+浏览器池 (browser_pool.py)
+    │
+    └── 创建实例时无条件从 proxy_manager.get_proxy() 获取代理
+        (不管规则配置什么，浏览器都可能使用不同的代理)
+
+credential_cache (cache_service.py)
+    │
+    └── get_credentials() 不接收 proxy 参数
+        无法将规则的代理配置传递给浏览器过盾流程
+```
+
+### 问题总结
+1. **浏览器代理与规则配置脱节**: 浏览器创建时不知道规则的代理配置
+2. **代理不一致风险**: 浏览器过盾用的 IP 可能与 CookieFetcher 用的 IP 不同
+3. **降级时代理问题**: BrowserFetcher 使用已有浏览器实例的代理，不是规则指定的
+4. **代理池轮换问题**: 如果代理池有多个 IP，每次 get_proxy() 可能返回不同 IP
+
+### 理想架构
+```
+规则配置代理
+    ↓
+CookieFetcher.fetch(proxy=规则代理)
+    ↓
+credential_cache.get_credentials(url, proxy=规则代理)
+    ↓
+solve_turnstile(url, proxy=规则代理)
+    ↓
+browser_pool.acquire(proxy=规则代理)
+    ↓
+创建/复用匹配该代理的浏览器实例
+    ↓
+浏览器过盾获取 Cookie (使用规则代理)
+    ↓
+CookieFetcher 使用相同代理发起请求
+    ↓
+IP 一致，Cookie 有效
+```
+
+### 需要修改的文件
+1. `core/browser_pool.py` - `acquire()` 接收 `proxy` 参数，按代理分组管理实例
+2. `core/solver.py` - `solve_turnstile()` 接收 `proxy` 参数
+3. `services/cache_service.py` - `get_credentials()` 接收 `proxy` 参数，按 (domain, proxy) 缓存
+4. `core/fetchers/cookie_fetcher.py` - 将 `proxy` 传递给 `credential_cache`
+
+### 临时解决方案
+1. **单代理模式**: 代理池只配置一个代理，确保浏览器和 CookieFetcher 使用相同 IP
+2. **无代理模式**: 不使用代理，浏览器和 CookieFetcher 都直连
+3. **浏览器直出模式**: 规则配置使用 `browser` 模式，跳过 Cookie 复用
+
+---
+
+## 当前状态
+
+- [x] 前端问题已修复
+- [x] 后端 API 问题已修复
+- [x] Cookie 复用（无代理）正常工作
+- [x] Cookie 复用失败时自动降级到浏览器直出
+- [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 IP 一致性

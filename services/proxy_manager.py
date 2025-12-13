@@ -53,5 +53,40 @@ class ProxyManager:
     def get_all(self) -> List[str]:
         return self._proxies
 
+    def add_proxies(self, proxies: List[str]) -> int:
+        """添加代理并持久化到文件"""
+        added = 0
+        for proxy in proxies:
+            normalized = self._normalize(proxy.strip())
+            if normalized and normalized not in self._proxies:
+                self._proxies.append(normalized)
+                added += 1
+
+        if added > 0:
+            self._save_to_file()
+            log.info(f"[ProxyManager] Added {added} proxies, total: {len(self._proxies)}")
+        return added
+
+    def remove_proxy(self, proxy: str) -> bool:
+        """删除代理并持久化到文件"""
+        normalized = self._normalize(proxy.strip())
+        if normalized in self._proxies:
+            self._proxies.remove(normalized)
+            self._save_to_file()
+            log.info(f"[ProxyManager] Removed proxy: {normalized}")
+            return True
+        return False
+
+    def _save_to_file(self):
+        """保存代理列表到文件"""
+        try:
+            os.makedirs(os.path.dirname(settings.PROXIES_FILE), exist_ok=True)
+            with open(settings.PROXIES_FILE, "w", encoding="utf-8") as f:
+                for proxy in self._proxies:
+                    f.write(proxy + "\n")
+            log.info(f"[ProxyManager] Saved {len(self._proxies)} proxies to file")
+        except Exception as e:
+            log.error(f"[ProxyManager] Failed to save proxies to file: {e}")
+
 # 全局单例
 proxy_manager = ProxyManager()

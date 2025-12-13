@@ -1891,19 +1891,23 @@
                         editingRule.value = rule.id;
                         ruleForm.name = rule.name || '';
                         ruleForm.target_url = rule.target_url || '';
-                        ruleForm.method = rule.method || 'GET';
-                        ruleForm.mode = rule.mode || 'cookie';
+                        // 所有字段使用严格判断，避免默认值覆盖实际值
+                        ruleForm.method = rule.method !== undefined ? rule.method : 'GET';
+                        ruleForm.mode = rule.mode !== undefined ? rule.mode : 'cookie';
                         ruleForm.selectors = Object.entries(rule.selectors || {}).map(([k, v]) => ({ key: k, selector: v }));
                         ruleForm.wait_for = rule.wait_for || '';
-                        // 使用严格判断，避免默认值覆盖
                         ruleForm.api_type = rule.api_type !== undefined ? rule.api_type : 'proxy';
-                        ruleForm.headers_list = Object.entries(rule.headers || {}).map(([k, v]) => ({ key: k, value: v }));
-                        ruleForm.body = rule.body || '';
+                        // headers 需要特殊处理，确保是数组
+                        const headersObj = rule.headers || {};
+                        ruleForm.headers_list = Object.keys(headersObj).length > 0
+                            ? Object.entries(headersObj).map(([k, v]) => ({ key: k, value: v }))
+                            : [];
+                        ruleForm.body = rule.body !== undefined && rule.body !== null ? rule.body : '';
                         ruleForm.body_type = rule.body_type !== undefined ? rule.body_type : 'none';
                         ruleForm.is_public = rule.is_public === true;
                         ruleForm.proxy_mode = rule.proxy_mode !== undefined ? rule.proxy_mode : 'none';
-                        ruleForm.proxy = rule.proxy || '';
-                        ruleForm.cache_ttl = rule.cache_ttl || 0;
+                        ruleForm.proxy = rule.proxy !== undefined && rule.proxy !== null ? rule.proxy : '';
+                        ruleForm.cache_ttl = rule.cache_ttl !== undefined ? rule.cache_ttl : 0;
                     }
                     showRuleForm.value = true;
                 };

@@ -42,7 +42,8 @@ from utils.logger import log
 # ============================================================================
 
 # 默认 Fetcher 实例（retries=0 表示失败直接降级，不重试）
-_default_fetcher = CookieFetcher(retries=0, timeout=30, impersonate=None)
+# impersonate="chrome136" 模拟 Chrome TLS 指纹（curl_cffi 支持的最新版本）
+_default_fetcher = CookieFetcher(retries=0, timeout=30, impersonate="chrome136")
 
 # 浏览器直读 Fetcher 实例
 _browser_fetcher = BrowserFetcher(timeout=20)
@@ -150,10 +151,16 @@ def proxy_request(
 
     # 选择 Fetcher
     if fetcher:
-        # 显式指定 fetcher
-        selected_fetcher = get_fetcher(fetcher)
-        # cookie 模式仍支持自动降级，browser 模式不降级
-        use_fallback = auto_fallback and fetcher == "cookie"
+        # 显式指定 fetcher，但代理模式下 cookie 改用 browser（TLS 指纹不一致问题）
+        if proxy and fetcher == "cookie":
+            # 使用代理时，直接用 BrowserFetcher（避免 TLS 指纹不一致导致的失败）
+            selected_fetcher = _browser_fetcher
+            use_fallback = False
+            log.info(f"[ProxyService] 代理模式下 cookie fetcher 改用 BrowserFetcher")
+        else:
+            selected_fetcher = get_fetcher(fetcher)
+            # cookie 模式仍支持自动降级，browser 模式不降级
+            use_fallback = auto_fallback and fetcher == "cookie"
     elif proxy:
         # 使用代理时，直接用 BrowserFetcher（避免 TLS 指纹不一致导致的失败）
         selected_fetcher = _browser_fetcher

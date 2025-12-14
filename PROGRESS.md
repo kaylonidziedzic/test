@@ -247,6 +247,124 @@ CookieFetcher → 被拦截 → 降级到 BrowserFetcher → 约 3-5 秒
 
 ---
 
+## 2024-12-14 代理模式跳过 CookieFetcher 逻辑 Bug (已修复)
+
+### 问题描述
+`proxy_service.py` 中的 `elif proxy:` 分支（直接使用 BrowserFetcher）永远不会被执行。
+
+### 根本原因
+```python
+# proxy_service.py 第 151-170 行
+if fetcher:        # fetcher 总是有值 ("cookie" 或 "browser")
+    selected_fetcher = get_fetcher(fetcher)
+    ...
+elif proxy:        # ← 永远不会执行！
+    selected_fetcher = _browser_fetcher
+    ...
+```
+
+调用链中 `execution_service.py` 总是设置 `fetcher` 参数：
+```python
+fetcher = "browser" if rule.mode == "browser" else "cookie"
+```
+
+### 影响
+使用代理时，仍然先走 CookieFetcher，被拦截后才降级到 BrowserFetcher，浪费了一次请求。
+
+### 修复方案
+在 `if fetcher:` 分支内部检查 proxy，如果有代理且是 cookie 模式则改用 BrowserFetcher：
+```python
+if fetcher:
+    # 显式指定 fetcher，但代理模式下 cookie 改用 browser（TLS 指纹不一致问题）
+    if proxy and fetcher == "cookie":
+        # 使用代理时，直接用 BrowserFetcher
+        selected_fetcher = _browser_fetcher
+        use_fallback = False
+        log.info(f"[ProxyService] 代理模式下 cookie fetcher 改用 BrowserFetcher")
+    else:
+        selected_fetcher = get_fetcher(fetcher)
+        use_fallback = auto_fallback and fetcher == "cookie"
+```
+
+---
+
+## 2024-12-14 代理模式 Cookie 复用深入研究 (已结论)
+
+### 研究目标
+尝试通过 curl_cffi 的自定义 JA3 参数使代理模式下 Cookie 复用可行。
+
+### 测试方法
+
+1. **获取浏览器真实指纹**:
+   - 使用 DrissionPage 访问 `https://tls.browserleaks.com/json`
+   - 获取 JA3: `771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,10-17613-16-18-11-45-23-0-5-27-51-43-13-65281-65037-35,4588-29-23-24,0`
+   - 获取 Akamai: `1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p`
+
+2. **对比 curl_cffi chrome136 指纹**:
+   - JA3n (normalized) 完全相同 ✓
+   - Akamai 指纹完全相同 ✓
+   - JA3 (非 normalized) 略有差异（扩展顺序不同）
+
+3. **使用自定义 JA3 参数**:
+   ```python
+   curl_requests.get(
+       url,
+       impersonate='chrome136',
+       ja3=browser_ja3,       # 精确匹配浏览器 JA3
+       akamai=browser_akamai, # 精确匹配浏览器 Akamai
+   )
+   ```
+   指纹验证：ja3_hash 完全匹配浏览器 ✓
+
+### 测试结果
+
+| 场景 | 过盾方式 | 请求方式 | 结果 |
+|------|----------|----------|------|
+| 无代理 | 浏览器直连 | curl_cffi 直连 | ✅ 成功 |
+| 无代理过盾 → 代理请求 | 浏览器直连 | curl_cffi 代理 | ❌ 403 (跨 IP) |
+| 代理 | 浏览器代理 | curl_cffi 同代理 | ❌ 403 |
+| 代理 + 自定义 JA3 | 浏览器代理 | curl_cffi 同代理 | ❌ 403 |
+| 代理 + Client Hints | 浏览器代理 | curl_cffi 同代理 | ❌ 403 |
+
+### 关键发现
+
+1. **cf_clearance Cookie 与 IP 绑定**:
+   - 无代理获取的 Cookie 无法用于代理请求（跨 IP 失效）
+
+2. **代理模式下 Cookie 复用失败的根本原因**:
+   - 即使 IP 相同、JA3 相同、Akamai 相同、Client Hints 完整
+   - Cloudflare 仍能检测出浏览器和 curl_cffi 的差异
+   - **推测**: cf_clearance 绑定了 TLS Session（Session ID/Ticket），而非仅 IP + 指纹
+
+3. **Cloudflare 检测机制**:
+   - 响应头 `cf-mitigated: challenge` 表明触发了挑战
+   - `critical-ch` 要求完整的 Client Hints，但即使提供也无效
+   - 检测层级: IP → TLS 指纹 → HTTP 指纹 → **TLS Session 绑定**
+
+### 结论
+
+**代理模式下 Cookie 复用在当前技术条件下无法实现**。原因是 Cloudflare 的防护机制包含 TLS Session 级别的绑定，curl_cffi 无法继承浏览器的 Session 状态。
+
+当前方案（代理模式直接使用 BrowserFetcher）是正确且必要的选择。
+
+### Bug 修复的性能收益
+
+修复 `elif proxy:` 分支永不执行的 Bug 后，代理模式响应时间显著改善：
+
+| 场景 | 修复前 | 修复后 |
+|------|--------|--------|
+| 代理模式 | CookieFetcher 过盾 + 请求失败 + 降级 = **10-18秒** | 直接 BrowserFetcher = **3-5秒** |
+
+### 未来可能的突破方向（仅理论）
+
+1. 使用支持 TLS Session 复用的库
+2. 让浏览器代理 HTTP 请求（CDP/Playwright fetch API）
+3. 等待 curl_cffi 支持更底层的 TLS Session 控制
+
+这些都需要更深层的技术改造，目前没有现成方案。
+
+---
+
 ## 当前状态
 
 - [x] 前端问题已修复
@@ -255,5 +373,6 @@ CookieFetcher → 被拦截 → 降级到 BrowserFetcher → 约 3-5 秒
 - [x] Cookie 复用失败时自动降级到浏览器直出
 - [x] **BrowserFetcher POST 请求支持** (2024-12-14)
 - [x] ~~Cookie 重试失败后清理机制~~ (已移除，改为直接降级)
-- [x] **代理模式优化：直接使用 BrowserFetcher** (2024-12-14)
-- [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 TLS 指纹一致性（长期目标）
+- [x] **代理模式优化：直接使用 BrowserFetcher** (2024-12-14) - Bug 已修复
+- [x] **代理模式 Cookie 复用研究** (2024-12-14) - 结论：技术限制无法实现
+

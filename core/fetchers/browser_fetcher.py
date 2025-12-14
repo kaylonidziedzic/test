@@ -59,17 +59,13 @@ class BrowserFetcher(BaseFetcher):
     ) -> FetchResponse:
         """使用浏览器直接获取页面
 
-        注意: 此方法忽略 method, headers, data, json 参数，
-        因为浏览器只能模拟 GET 请求。
-
         Args:
+            method: HTTP 方法，支持 GET 和 POST
+            data: POST 表单数据（字符串格式如 "key1=value1&key2=value2" 或 dict）
             proxy: 代理地址，None 表示不使用代理，"pool" 表示从代理池获取
             wait_for: 等待指定的 CSS 选择器元素出现后再采集
         """
-        if method.upper() != "GET":
-            log.warning(f"[{self.name}] 浏览器直读仅支持 GET 请求，忽略 method={method}")
-
-        log.info(f"[{self.name}] 使用浏览器直接获取: {url}")
+        log.info(f"[{self.name}] 使用浏览器直接获取: {url} (method={method})")
 
         # 从浏览器池获取实例，传递代理参数
         instance = browser_pool.acquire(timeout=60, proxy=proxy)
@@ -79,9 +75,15 @@ class BrowserFetcher(BaseFetcher):
         try:
             page = instance.page
 
-            # 1. 访问目标页面
-            log.info(f"[{self.name}] 正在访问: {url} (浏览器 PID: {instance.pid})")
-            page.get(url)
+            # 1. 访问目标页面或提交表单
+            if method.upper() == "POST" and data:
+                # POST 请求：通过 JavaScript 创建并提交表单
+                log.info(f"[{self.name}] 使用 JS 表单提交 POST 请求: {url} (浏览器 PID: {instance.pid})")
+                self._submit_form_via_js(page, url, data)
+            else:
+                # GET 请求：直接访问
+                log.info(f"[{self.name}] 正在访问: {url} (浏览器 PID: {instance.pid})")
+                page.get(url)
 
             # 2. 等待页面加载并处理 Cloudflare 验证
             import time
@@ -149,6 +151,65 @@ class BrowserFetcher(BaseFetcher):
         finally:
             # 归还浏览器到池中
             browser_pool.release(instance)
+
+    def _submit_form_via_js(self, page, url: str, data) -> None:
+        """通过 JavaScript 创建并提交表单实现 POST 请求
+
+        Args:
+            page: DrissionPage 页面对象
+            url: 表单提交目标 URL
+            data: 表单数据（字符串 "key1=value1&key2=value2" 或 dict）
+        """
+        from urllib.parse import parse_qs, urlparse
+
+        # 解析表单数据
+        form_data = {}
+        if isinstance(data, dict):
+            form_data = data
+        elif isinstance(data, str):
+            # 解析 URL 编码的字符串
+            parsed = parse_qs(data, keep_blank_values=True)
+            form_data = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+
+        log.info(f"[{self.name}] 表单数据: {form_data}")
+
+        # 先访问目标域名的任意页面（确保在同域下执行 JS）
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        page.get(base_url)
+
+        # 等待页面加载
+        import time
+        time.sleep(1)
+
+        # 构建 JavaScript 代码创建并提交表单
+        # 使用 JSON 传递数据避免转义问题
+        import json
+        form_data_json = json.dumps(form_data, ensure_ascii=False)
+
+        js_code = f'''
+        (function() {{
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{url}';
+            form.style.display = 'none';
+
+            var formData = {form_data_json};
+            for (var key in formData) {{
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = formData[key];
+                form.appendChild(input);
+            }}
+
+            document.body.appendChild(form);
+            form.submit();
+        }})();
+        '''
+
+        page.run_js(js_code)
+        log.info(f"[{self.name}] 表单已提交")
 
     def _parse_cookies(self, raw_cookies) -> Dict[str, str]:
         """解析浏览器返回的 cookies"""

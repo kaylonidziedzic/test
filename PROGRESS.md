@@ -118,10 +118,68 @@ IP 一致，Cookie 有效
 
 ---
 
+## 2024-12-14 BrowserFetcher POST 请求支持 (已修复)
+
+### 问题描述
+访问 `http://127.0.0.1:8000/v1/run/0c64f4f3?q=斗破` 时，看到的是搜索页而不是搜索结果页。
+
+### 规则配置
+```json
+{
+  "name": "tesat",
+  "target_url": "https://www.69shuba.com/modules/article/search.php",
+  "method": "POST",
+  "body": "searchkey={q}",
+  "body_type": "form",
+  "api_type": "reader"
+}
+```
+
+### 根本原因
+1. CookieFetcher 发送 POST 请求时被 Cloudflare Turnstile 拦截
+2. 系统降级到 BrowserFetcher
+3. **BrowserFetcher 只支持 GET 请求**，POST 请求被当作 GET 处理
+4. 表单数据 `searchkey=斗破` 丢失，只访问了 URL 本身
+5. 结果返回的是搜索页（空表单）而不是搜索结果页
+
+### 日志证据
+```
+[ProxyService] 降级到 BrowserFetcher，但 POST 请求将被当作 GET 处理
+[BrowserFetcher] 正在访问: https://www.69shuba.com/modules/article/search.php
+[BrowserFetcher] 页面加载成功，标题: 小说搜索_69书吧  ← 搜索页，不是结果页
+```
+
+### 修复方案
+1. **`core/fetchers/browser_fetcher.py`**：
+   - 添加 `_submit_form_via_js()` 方法
+   - 通过 JavaScript 动态创建表单并提交，实现 POST 请求
+   - 先访问目标域名首页（确保同域），再执行 JS 提交表单
+
+2. **`services/proxy_service.py`**：
+   - 修改 `_fallback_to_browser()` 函数
+   - 将 `method` 和 `data` 参数传递给 BrowserFetcher
+   - 删除强制转换为 GET 的逻辑
+
+### 修复后日志
+```
+[CookieFetcher] 未检测到拦截特征，请求成功
+标题: 《斗破》搜索结果_69书吧  ← 正确的搜索结果页
+```
+
+### 补充说明
+实际上 CookieFetcher 对 POST 请求本身是支持的。之前失败是因为 **Cookie 过期/失效**，容器重启后浏览器重新过盾获取了新的有效 Cookie，所以 POST 请求能直接成功。
+
+BrowserFetcher POST 修复是一个**兜底方案**，确保即使 Cookie 失效且重试也失败时，降级到浏览器仍能正确处理 POST 请求。
+
+**待解决问题**：Cookie 失效后，CookieFetcher 重试时重新过盾，但新 Cookie 仍可能被拦截（原因待查）。
+
+---
+
 ## 当前状态
 
 - [x] 前端问题已修复
 - [x] 后端 API 问题已修复
 - [x] Cookie 复用（无代理）正常工作
 - [x] Cookie 复用失败时自动降级到浏览器直出
+- [x] **BrowserFetcher POST 请求支持** (2024-12-14)
 - [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 IP 一致性

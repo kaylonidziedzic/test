@@ -224,17 +224,14 @@ def _fallback_to_browser(
 ) -> FetchResponse:
     """降级到浏览器直读
 
-    注意: BrowserFetcher 目前只支持 GET 请求。
-    对于 POST 请求，会记录警告但仍尝试获取页面。
+    支持 GET 和 POST 请求。POST 请求通过 JavaScript 表单提交实现。
     """
-    if method.upper() != "GET":
-        log.warning(f"[ProxyService] 降级到 BrowserFetcher，但 {method} 请求将被当作 GET 处理")
-
-    log.info(f"[ProxyService] 降级使用 BrowserFetcher 处理请求: {url}")
+    log.info(f"[ProxyService] 降级使用 BrowserFetcher 处理请求: {url} (method={method})")
     return _browser_fetcher.fetch(
         url=url,
-        method="GET",  # BrowserFetcher 只支持 GET
+        method=method,
         headers=headers or {},
+        data=data,
     )
 
 

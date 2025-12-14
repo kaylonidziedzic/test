@@ -363,41 +363,65 @@
                                         </div>
                                     </div>
                                     <!-- 测试结果 -->
-                                    <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
+                                    <div v-if="testResult" class="p-4 bg-zinc-50 border border-zinc-200 rounded-lg overflow-hidden">
                                         <div class="flex justify-between items-center mb-3">
                                             <span
                                                 :class="['font-semibold text-sm flex items-center gap-1.5', testResult.success ? 'text-green-600' : 'text-red-600']">
                                                 <i
                                                     :class="testResult.success ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
-                                                {{ testResult.success ? '成功' : '失败' }}
+                                                {{ testResult.success ? '请求成功' : '请求失败' }}
                                             </span>
-                                            <span class="font-mono text-zinc-500 text-xs">{{ testResult.duration_ms
-                                                }}ms</span>
+                                            <div class="flex items-center gap-3 text-xs text-zinc-500">
+                                                <span v-if="testResult.status" class="font-mono">HTTP {{ testResult.status }}</span>
+                                                <span class="font-mono">{{ testResult.duration_ms }}ms</span>
+                                            </div>
                                         </div>
+                                        <!-- 错误信息 -->
                                         <div v-if="testResult.error"
-                                            class="text-xs text-red-600 p-2 bg-red-50 rounded border border-red-200">
+                                            class="text-xs text-red-600 p-3 bg-red-50 rounded-lg border border-red-200 mb-3">
+                                            <div class="font-semibold mb-1">错误原因：</div>
                                             {{ testResult.error }}
                                         </div>
-                                        <div v-if="testResult.success" class="space-y-2 text-xs">
-                                            <div v-if="testResult.cookies_count" class="text-zinc-600">
-                                                <span class="font-semibold">Cookies:</span> {{ testResult.cookies_count
-                                                }} 个
+                                        <!-- 成功信息 -->
+                                        <div v-if="testResult.success" class="space-y-3">
+                                            <!-- 基础信息 -->
+                                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                                <div v-if="testResult.cookies_count" class="p-2 bg-white rounded border border-zinc-200">
+                                                    <div class="text-zinc-400">Cookies</div>
+                                                    <div class="font-semibold text-zinc-700">{{ testResult.cookies_count }} 个</div>
+                                                </div>
+                                                <div v-if="testResult.raw_length" class="p-2 bg-white rounded border border-zinc-200">
+                                                    <div class="text-zinc-400">响应大小</div>
+                                                    <div class="font-semibold text-zinc-700">{{ (testResult.raw_length / 1024).toFixed(1) }} KB</div>
+                                                </div>
+                                                <div v-if="testResult.headers" class="p-2 bg-white rounded border border-zinc-200">
+                                                    <div class="text-zinc-400">Content-Type</div>
+                                                    <div class="font-semibold text-zinc-700 truncate text-[10px]">{{ testResult.headers['content-type'] || '-' }}</div>
+                                                </div>
+                                                <div class="p-2 bg-white rounded border border-zinc-200">
+                                                    <div class="text-zinc-400">采集模式</div>
+                                                    <div class="font-semibold text-zinc-700">{{ testResult.mode === 'browser' ? '完整模式' : '快速模式' }}</div>
+                                                </div>
                                             </div>
-                                            <div v-if="testResult.content_length" class="text-zinc-600">
-                                                <span class="font-semibold">内容长度:</span> {{
-                                                testResult.content_length.toLocaleString() }} 字符
+                                            <!-- 提取的数据 -->
+                                            <div v-if="testResult.data && typeof testResult.data === 'object' && Object.keys(testResult.data).length > 0"
+                                                class="border-t border-zinc-200 pt-3">
+                                                <div class="text-xs font-semibold text-zinc-700 mb-2 flex items-center gap-1">
+                                                    <i class="ri-database-2-line text-green-600"></i>
+                                                    提取的数据预览
+                                                </div>
+                                                <div class="space-y-2 max-h-64 overflow-y-auto">
+                                                    <div v-for="(value, key) in testResult.data" :key="key"
+                                                        class="p-2 bg-green-50 border border-green-200 rounded-lg">
+                                                        <div class="text-[10px] font-semibold text-green-700 mb-0.5">{{ key }}</div>
+                                                        <pre class="text-xs text-zinc-800 whitespace-pre-wrap break-all m-0 font-sans">{{ value || '(空)' }}</pre>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div v-if="testResult.raw_length" class="text-zinc-600">
-                                                <span class="font-semibold">原始长度:</span> {{
-                                                testResult.raw_length.toLocaleString() }} 字节
-                                            </div>
-                                            <div v-if="testResult.status" class="text-zinc-600">
-                                                <span class="font-semibold">状态码:</span> {{ testResult.status }}
-                                            </div>
-                                            <div v-if="testResult.data" class="mt-2 text-zinc-600">
-                                                <span class="font-semibold block mb-1">提取数据:</span>
-                                                <pre
-                                                    class="bg-white p-2 rounded border border-zinc-200 text-[10px] overflow-auto max-h-32">{{ testResult.data }}</pre>
+                                            <!-- 原始数据（如果不是对象） -->
+                                            <div v-else-if="testResult.data" class="border-t border-zinc-200 pt-3">
+                                                <div class="text-xs font-semibold text-zinc-700 mb-2">响应内容预览：</div>
+                                                <pre class="bg-white p-2 rounded border border-zinc-200 text-[10px] overflow-auto max-h-32 whitespace-pre-wrap">{{ typeof testResult.data === 'string' ? testResult.data.substring(0, 500) + (testResult.data.length > 500 ? '...' : '') : JSON.stringify(testResult.data, null, 2) }}</pre>
                                             </div>
                                         </div>
                                     </div>
@@ -535,9 +559,10 @@
                                                 <td class="px-6 py-4 text-center">
                                                     <div class="flex items-center justify-center gap-1">
                                                         <button @click="testRule(rule)" :disabled="ruleTesting"
-                                                            class="p-2 text-zinc-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                            class="p-2 text-zinc-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all disabled:opacity-50"
                                                             title="测试规则">
-                                                            <i class="ri-play-line"></i>
+                                                            <span v-if="ruleTesting" class="loader w-4 h-4"></span>
+                                                            <i v-else class="ri-play-line"></i>
                                                         </button>
                                                         <button @click="openRuleForm(rule)"
                                                             class="p-2 text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -571,6 +596,8 @@
                             <div v-if="ruleTestResult" class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
                                 <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                                     <i class="ri-test-tube-line text-green-600"></i> 测试结果
+                                    <span v-if="ruleTestResult.success" class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">成功</span>
+                                    <span v-else class="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">失败</span>
                                 </h3>
                                 <div v-if="ruleTestResult.error"
                                     class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -578,23 +605,38 @@
                                     {{ ruleTestResult.error }}
                                 </div>
                                 <div v-else class="space-y-4">
+                                    <!-- 规则信息 -->
                                     <div v-if="ruleTestResult.meta" class="p-3 bg-zinc-50 rounded-lg">
-                                        <div class="text-xs text-zinc-500 mb-1">规则信息</div>
-                                        <div class="font-mono text-sm">{{ ruleTestResult.meta.name }} ({{
-                                            ruleTestResult.meta.rule_id }})</div>
-                                    </div>
-                                    <div v-if="ruleTestResult.data && Object.keys(ruleTestResult.data).length > 0">
-                                        <div class="text-xs text-zinc-500 mb-2">提取数据</div>
-                                        <div class="space-y-2">
-                                            <div v-for="(value, key) in ruleTestResult.data" :key="key"
-                                                class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                                <div class="text-xs font-semibold text-green-700 mb-1">{{ key }}</div>
-                                                <div class="text-sm text-zinc-800 break-all">{{ value || '(空)' }}</div>
+                                        <div class="text-xs text-zinc-500 mb-2">规则信息</div>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                            <div>
+                                                <span class="text-zinc-400">名称:</span>
+                                                <span class="font-medium text-zinc-700 ml-1">{{ ruleTestResult.meta.name }}</span>
+                                            </div>
+                                            <div v-if="ruleTestResult.meta.status">
+                                                <span class="text-zinc-400">状态码:</span>
+                                                <span class="font-mono font-medium ml-1" :class="ruleTestResult.meta.status < 400 ? 'text-green-600' : 'text-red-600'">{{ ruleTestResult.meta.status }}</span>
+                                            </div>
+                                            <div v-if="ruleTestResult.meta.content_type">
+                                                <span class="text-zinc-400">类型:</span>
+                                                <span class="font-mono text-zinc-700 ml-1 truncate">{{ ruleTestResult.meta.content_type.split(';')[0] }}</span>
+                                            </div>
+                                            <div v-if="ruleTestResult.raw_length">
+                                                <span class="text-zinc-400">大小:</span>
+                                                <span class="font-mono text-zinc-700 ml-1">{{ (ruleTestResult.raw_length / 1024).toFixed(1) }} KB</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div v-if="ruleTestResult.raw_length" class="text-xs text-zinc-500">
-                                        原始内容长度: {{ ruleTestResult.raw_length.toLocaleString() }} 字符
+                                    <!-- 提取数据 -->
+                                    <div v-if="ruleTestResult.data && Object.keys(ruleTestResult.data).length > 0">
+                                        <div class="text-xs text-zinc-500 mb-2">提取数据</div>
+                                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                                            <div v-for="(value, key) in ruleTestResult.data" :key="key"
+                                                class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                <div class="text-xs font-semibold text-green-700 mb-1">{{ key }}</div>
+                                                <pre class="text-sm text-zinc-800 whitespace-pre-wrap break-all m-0 font-sans">{{ value || '(空)' }}</pre>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -638,18 +680,38 @@
                         <div v-if="showRuleForm" @click="showRuleForm = false"
                             class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div @click.stop
-                                class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+                                class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
                                 <div
-                                    class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
-                                    <h3 class="text-base font-semibold text-zinc-900">
-                                        {{ editingRule ? '编辑规则' : '新建采集规则' }}
-                                    </h3>
+                                    class="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="text-base font-semibold text-zinc-900">
+                                            {{ editingRule ? '编辑规则' : '新建采集规则' }}
+                                        </h3>
+                                        <!-- 示例规则下拉 -->
+                                        <div v-if="!editingRule" class="relative group">
+                                            <button type="button"
+                                                class="px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center gap-1.5 transition-all">
+                                                <i class="ri-lightbulb-flash-line"></i> 加载示例
+                                                <i class="ri-arrow-down-s-line"></i>
+                                            </button>
+                                            <div class="absolute left-0 top-full mt-1 w-72 bg-white border border-zinc-200 rounded-xl shadow-xl z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                                <div class="p-2">
+                                                    <div v-for="(example, idx) in exampleRules" :key="idx"
+                                                        @click="applyExampleRule(example)"
+                                                        class="p-3 hover:bg-purple-50 rounded-lg cursor-pointer transition-all">
+                                                        <div class="font-medium text-sm text-zinc-900">{{ example.name }}</div>
+                                                        <div class="text-xs text-zinc-500 mt-1">{{ example.description }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <button @click="showRuleForm = false"
                                         class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
                                         <i class="ri-close-line text-xl"></i>
                                     </button>
                                 </div>
-                                <div class="p-6 space-y-5">
+                                <div class="p-6 space-y-5 overflow-y-auto flex-1">
                                     <!-- 基本信息 -->
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
@@ -658,12 +720,15 @@
                                                 class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">接口类型</label>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2 flex items-center">
+                                                接口类型
+                                                <help-tip :text="helpTexts.api_proxy"></help-tip>
+                                            </label>
                                             <select v-model="ruleForm.api_type"
                                                 class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
-                                                <option value="proxy">JSON 代理（返回结构化数据）</option>
-                                                <option value="raw">原始内容（返回二进制/原文）</option>
-                                                <option value="reader">阅读模式（返回处理后 HTML）</option>
+                                                <option value="proxy">JSON 代理（结构化数据）</option>
+                                                <option value="raw">原始内容（二进制/原文）</option>
+                                                <option value="reader">阅读模式（干净 HTML）</option>
                                             </select>
                                         </div>
                                     </div>
@@ -672,8 +737,12 @@
                                         <label class="block text-xs font-semibold text-zinc-700 mb-2">目标 URL <span
                                                 class="text-red-500">*</span></label>
                                         <input v-model="ruleForm.target_url" type="url"
-                                            placeholder="https://example.com/page"
+                                            placeholder="https://example.com/page 或带占位符 https://xxx.com/search?q={keyword}"
                                             class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none font-mono">
+                                        <p class="text-xs text-zinc-500 mt-1">
+                                            <i class="ri-information-line mr-1"></i>
+                                            支持 {占位符}，调用时通过 ?占位符=值 替换
+                                        </p>
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -686,15 +755,21 @@
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">采集模式</label>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2 flex items-center">
+                                                采集模式
+                                                <help-tip :text="ruleForm.mode === 'cookie' ? helpTexts.mode_cookie : helpTexts.mode_browser"></help-tip>
+                                            </label>
                                             <select v-model="ruleForm.mode"
                                                 class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
-                                                <option value="cookie">Cookie 复用</option>
-                                                <option value="browser">浏览器直读</option>
+                                                <option value="cookie">快速模式（推荐）</option>
+                                                <option value="browser">完整模式（更稳定）</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-zinc-700 mb-2">访问控制</label>
+                                            <label class="block text-xs font-semibold text-zinc-700 mb-2 flex items-center">
+                                                访问控制
+                                                <help-tip :text="helpTexts.is_public"></help-tip>
+                                            </label>
                                             <select v-model="ruleForm.is_public"
                                                 class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-purple-500 outline-none">
                                                 <option :value="false">私有（需 API Key）</option>
@@ -710,16 +785,20 @@
                                         </div>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <div v-if="ruleForm.mode === 'browser'">
-                                                <label class="block text-xs text-zinc-600 mb-1">等待元素（可选）</label>
+                                                <label class="block text-xs text-zinc-600 mb-1 flex items-center">
+                                                    等待元素（可选）
+                                                    <help-tip :text="helpTexts.wait_for"></help-tip>
+                                                </label>
                                                 <input v-model="ruleForm.wait_for" type="text" placeholder=".content, #main, article"
                                                     class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm font-mono outline-none">
-                                                <p class="text-xs text-zinc-500 mt-1">浏览器模式下等待指定元素出现后再采集</p>
                                             </div>
                                             <div>
-                                                <label class="block text-xs text-zinc-600 mb-1">缓存时间（秒）</label>
+                                                <label class="block text-xs text-zinc-600 mb-1 flex items-center">
+                                                    缓存时间（秒）
+                                                    <help-tip :text="helpTexts.cache_ttl"></help-tip>
+                                                </label>
                                                 <input v-model.number="ruleForm.cache_ttl" type="number" min="0" placeholder="0 表示不缓存"
                                                     class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
-                                                <p class="text-xs text-zinc-500 mt-1">相同请求在此时间内返回缓存结果</p>
                                             </div>
                                         </div>
                                     </div>
@@ -731,7 +810,10 @@
                                         </div>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <div>
-                                                <label class="block text-xs text-zinc-600 mb-1">代理模式</label>
+                                                <label class="block text-xs text-zinc-600 mb-1 flex items-center">
+                                                    代理模式
+                                                    <help-tip :text="ruleForm.proxy_mode === 'none' ? helpTexts.proxy_none : (ruleForm.proxy_mode === 'pool' ? helpTexts.proxy_pool : helpTexts.proxy_fixed)"></help-tip>
+                                                </label>
                                                 <select v-model="ruleForm.proxy_mode"
                                                     class="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm outline-none">
                                                     <option value="none">不使用代理（直连）</option>
@@ -803,12 +885,33 @@
                                     <!-- CSS 选择器（仅 proxy 模式） -->
                                     <div v-if="ruleForm.api_type === 'proxy'">
                                         <div class="flex items-center justify-between mb-2">
-                                            <label class="text-xs font-semibold text-zinc-700">数据提取规则（CSS 选择器）</label>
+                                            <label class="text-xs font-semibold text-zinc-700 flex items-center">
+                                                数据提取规则（CSS 选择器）
+                                                <help-tip :text="helpTexts.selectors"></help-tip>
+                                            </label>
                                             <button @click="addSelector" type="button"
                                                 class="text-xs text-purple-600 hover:text-purple-500 flex items-center gap-1">
                                             <i class="ri-add-line"></i> 添加字段
                                         </button>
                                     </div>
+
+                                    <!-- 选择器模板快捷按钮 -->
+                                    <div class="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <i class="ri-magic-line text-purple-600"></i>
+                                            <span class="text-xs font-semibold text-purple-700">快速添加常用选择器</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button v-for="tpl in selectorTemplates" :key="tpl.key"
+                                                @click="applySelectorTemplate(tpl)"
+                                                type="button"
+                                                class="px-3 py-1.5 text-xs font-medium bg-white hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg transition-all flex items-center gap-1">
+                                                <i class="ri-add-circle-line"></i>
+                                                {{ tpl.name }}
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <div class="space-y-2">
                                         <div v-for="(sel, idx) in ruleForm.selectors" :key="idx"
                                             class="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
@@ -996,8 +1099,8 @@
                             </div>
                         </div>
 
-                        <!-- 添加代理 -->
-                        <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
+                        <!-- 添加代理 (仅管理员) -->
+                        <div v-if="isAdmin" class="bg-white border border-zinc-200 rounded-xl p-6 shadow-lg">
                             <h3 class="text-sm font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                                 <i class="ri-add-circle-line text-blue-600"></i> 添加代理
                             </h3>
@@ -1058,11 +1161,12 @@
                                                 </span>
                                             </td>
                                             <td class="px-6 py-3 text-center">
-                                                <button @click="removeProxy(proxy.address || proxy)"
+                                                <button v-if="isAdmin" @click="removeProxy(proxy.address || proxy)"
                                                     class="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
                                                     title="删除">
                                                     <i class="ri-delete-bin-line"></i>
                                                 </button>
+                                                <span v-else class="text-xs text-zinc-400">-</span>
                                             </td>
                                         </tr>
                                         <tr v-if="proxyList.length === 0">
@@ -1092,7 +1196,8 @@
 
                     <!-- LOGS -->
                     <div v-if="activeTab === 'logs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                        <!-- 全局日志 (仅管理员可见) -->
+                        <div v-if="isAdmin" class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
                             <div
                                 class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
                                 <div>
@@ -1132,12 +1237,13 @@
                             </div>
                         </div>
 
-                        <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg">
+                        <!-- 用户日志 (非管理员时全宽显示) -->
+                        <div :class="['bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-lg', isAdmin ? '' : 'lg:col-span-2']">
                             <div
                                 class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
                                 <div>
-                                    <h3 class="text-sm font-semibold text-zinc-900">用户日志</h3>
-                                    <p class="text-xs text-zinc-500 mt-0.5">仅显示当前筛选用户的日志</p>
+                                    <h3 class="text-sm font-semibold text-zinc-900">{{ isAdmin ? '用户日志' : '我的日志' }}</h3>
+                                    <p class="text-xs text-zinc-500 mt-0.5">{{ isAdmin ? '仅显示当前筛选用户的日志' : '仅显示您产生的操作日志' }}</p>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <select v-model="logFilter"
@@ -1162,7 +1268,7 @@
                                     <span class="ml-2">{{ log.message }}</span>
                                 </div>
                                 <div v-if="filteredUserLogs.length === 0" class="text-center text-zinc-500 py-12">
-                                    暂无该用户日志</div>
+                                    {{ isAdmin ? '暂无该用户日志' : '暂无您的操作日志' }}</div>
                             </div>
                         </div>
                     </div>
@@ -1177,7 +1283,7 @@
                                     <p class="text-xs text-zinc-500 mt-0.5">{{ browserPoolInfo.total || 0 }} 总计, {{
                                         browserPoolInfo.available || 0 }} 可用</p>
                                 </div>
-                                <button @click="restartBrowserPool"
+                                <button v-if="isAdmin" @click="restartBrowserPool"
                                     class="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
                                     <i class="ri-restart-line"></i> 重启池
                                 </button>
@@ -1232,7 +1338,7 @@
                                     <h3 class="text-base font-semibold text-zinc-900">缓存统计</h3>
                                     <p class="text-sm text-zinc-500 mt-1">凭证缓存性能指标</p>
                                 </div>
-                                <button @click="clearAllCache"
+                                <button v-if="isAdmin" @click="clearAllCache"
                                     class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
                                     <i class="ri-delete-bin-line"></i> 清空全部缓存
                                 </button>
@@ -1357,6 +1463,15 @@
                                     </select>
                                     <p class="text-xs text-zinc-500 mt-2">为每个实例随机化 Canvas/WebGL/Audio 指纹</p>
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-zinc-700 mb-2">凭证自动刷新</label>
+                                    <select v-model="config.auto_refresh_credentials"
+                                        class="w-full bg-zinc-50 border border-zinc-300 rounded-lg px-4 py-2.5 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option :value="true">启用</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                    <p class="text-xs text-zinc-500 mt-2">自动刷新即将过期（5分钟内）的凭证，保持缓存有效</p>
+                                </div>
                             </div>
                         </div>
 
@@ -1365,7 +1480,7 @@
                                 class="px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-2 transition-all">
                                 <i class="ri-download-line"></i> 导出 JSON
                             </button>
-                            <button @click="saveConfig" :disabled="saving"
+                            <button v-if="isAdmin" @click="saveConfig" :disabled="saving"
                                 class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2 transition-all">
                                 <span v-if="saving" class="flex items-center gap-2">
                                     <span class="loader w-4 h-4"></span> 保存中...
@@ -1374,6 +1489,9 @@
                                     <i class="ri-save-line"></i> 保存配置
                                 </span>
                             </button>
+                            <span v-if="!isAdmin" class="text-xs text-zinc-500 flex items-center">
+                                <i class="ri-lock-line mr-1"></i> 仅管理员可修改配置
+                            </span>
                         </div>
                     </div>
 
@@ -1386,15 +1504,15 @@
     <div v-if="selectedRequest" @click="selectedRequest = null"
         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div @click.stop
-            class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-            <div class="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
+            class="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+            <div class="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="text-base font-semibold text-zinc-900">请求详情</h3>
                 <button @click="selectedRequest = null"
                     class="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all">
                     <i class="ri-close-line text-xl"></i>
                 </button>
             </div>
-            <div class="p-6 space-y-5">
+            <div class="p-6 space-y-5 overflow-y-auto flex-1">
                 <div>
                     <label class="text-xs font-semibold text-zinc-600 uppercase">状态</label>
                     <div :class="['mt-2 inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold',

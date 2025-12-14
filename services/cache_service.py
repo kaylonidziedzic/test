@@ -257,7 +257,35 @@ class RedisCache(BaseCache):
         super().__init__(expire_seconds)
         self.redis_client = redis.from_url(redis_url, decode_responses=True)
         self.prefix = "cred:"
+        self.stats_key = "cache_stats"
+        # 初始化统计
+        self._init_stats()
         log.info(f"[Cache:Redis] 已连接到 Redis: {redis_url}")
+
+    def _init_stats(self):
+        """初始化统计计数器"""
+        try:
+            if not self.redis_client.exists(self.stats_key):
+                self.redis_client.hset(self.stats_key, mapping={
+                    "hits": 0,
+                    "misses": 0
+                })
+        except redis.RedisError:
+            pass
+
+    def _record_hit(self):
+        """记录缓存命中"""
+        try:
+            self.redis_client.hincrby(self.stats_key, "hits", 1)
+        except redis.RedisError:
+            pass
+
+    def _record_miss(self):
+        """记录缓存未命中"""
+        try:
+            self.redis_client.hincrby(self.stats_key, "misses", 1)
+        except redis.RedisError:
+            pass
 
     def _get_key(self, domain: str) -> str:
         return f"{self.prefix}{domain}"
@@ -271,11 +299,13 @@ class RedisCache(BaseCache):
                 data = self.redis_client.get(key)
                 if data:
                     log.info(f"[Cache:Redis] 命中缓存: {domain}")
+                    self._record_hit()
                     return json.loads(data)
             except redis.RedisError as e:
                 log.error(f"[Cache:Redis] 读取失败: {e}")
 
         # 缓存无效，过盾
+        self._record_miss()
         log.info(f"[Cache:Redis] 启动过盾流程: {domain}")
         creds = solve_turnstile(url, proxy=proxy)
 
@@ -319,11 +349,33 @@ class RedisCache(BaseCache):
     def get_stats(self) -> Dict[str, Any]:
         try:
             keys = self.redis_client.keys(f"{self.prefix}*")
+
+            # 获取命中/未命中统计
+            stats_data = self.redis_client.hgetall(self.stats_key)
+            hits = int(stats_data.get("hits", 0))
+            misses = int(stats_data.get("misses", 0))
+            total_requests = hits + misses
+            hit_rate = round(hits / total_requests * 100, 1) if total_requests > 0 else 0
+
+            # 计算存储大小（估算）
+            size_bytes = 0
+            for key in keys:
+                try:
+                    data = self.redis_client.get(key)
+                    if data:
+                        size_bytes += len(data.encode('utf-8') if isinstance(data, str) else data)
+                except:
+                    pass
+
             return {
                 "type": "redis",
                 "total": len(keys),
-                "valid": len(keys),  # Redis 中存在的 keys 都是未过期的
+                "valid": len(keys),
                 "expired": 0,
+                "hits": hits,
+                "misses": misses,
+                "hit_rate": hit_rate,
+                "size_bytes": size_bytes,
                 "domains": [k.replace(self.prefix, "") for k in keys],
             }
         except redis.RedisError as e:

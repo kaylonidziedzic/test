@@ -132,8 +132,126 @@ const DonutChart = {
     }
 };
 
+// Tooltip 组件 - 帮助提示（使用 fixed 定位避免被 overflow 裁剪）
+const HelpTip = {
+    props: ['text'],
+    setup(props) {
+        const show = Vue.ref(false);
+        const style = Vue.ref({});
+
+        const showTip = (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const tipWidth = 256; // w-64 = 16rem = 256px
+            const spaceRight = window.innerWidth - rect.right;
+
+            // 计算位置
+            let left;
+            if (spaceRight < tipWidth + 20) {
+                // 右边空间不足，右对齐
+                left = rect.right - tipWidth;
+            } else {
+                // 左对齐
+                left = rect.left;
+            }
+
+            style.value = {
+                position: 'fixed',
+                left: `${left}px`,
+                top: `${rect.top - 8}px`,
+                transform: 'translateY(-100%)',
+                zIndex: 9999
+            };
+            show.value = true;
+        };
+
+        return () => Vue.h('span', {
+            class: 'relative inline-flex items-center ml-1 cursor-help',
+            onMouseenter: showTip,
+            onMouseleave: () => show.value = false
+        }, [
+            Vue.h('i', { class: 'ri-question-line text-zinc-400 hover:text-blue-500 text-sm' }),
+            show.value ? Vue.h('div', {
+                class: 'px-3 py-2 bg-zinc-800 text-white text-xs rounded-lg shadow-lg w-64 leading-relaxed',
+                style: { ...style.value, whiteSpace: 'normal', wordWrap: 'break-word' }
+            }, props.text) : null
+        ]);
+    }
+};
+
+// 选择器模板配置
+const SELECTOR_TEMPLATES = [
+    { name: '文章标题', key: 'title', selector: 'h1, .title, .article-title, [class*="title"]' },
+    { name: '正文内容', key: 'content', selector: 'article, .content, .article-content, .post-content, main' },
+    { name: '发布时间', key: 'time', selector: 'time, .time, .date, .publish-time, [datetime]' },
+    { name: '作者', key: 'author', selector: '.author, .byline, [rel="author"], .writer' },
+    { name: '商品价格', key: 'price', selector: '.price, [class*="price"], [data-price]' },
+    { name: '商品名称', key: 'product_name', selector: '.product-name, .item-title, h1.title' },
+    { name: '图片链接', key: 'image', selector: 'img.main, .product-image img, article img' },
+    { name: '列表项', key: 'items', selector: 'ul li, ol li, .list-item, .item' }
+];
+
+// 示例规则配置
+const EXAMPLE_RULES = [
+    {
+        name: '🌐 获取网页标题和描述',
+        target_url: 'https://example.com',
+        method: 'GET',
+        mode: 'cookie',
+        api_type: 'proxy',
+        selectors: { title: 'h1', description: 'p' },
+        description: '最简单的示例，抓取页面标题和第一段文字'
+    },
+    {
+        name: '📰 新闻文章采集',
+        target_url: 'https://news.ycombinator.com',
+        method: 'GET',
+        mode: 'cookie',
+        api_type: 'proxy',
+        selectors: {
+            title: '.titleline > a',
+            score: '.score',
+            comments: '.subline a:last-child'
+        },
+        description: '采集 Hacker News 首页的标题、分数和评论数'
+    },
+    {
+        name: '🔍 搜索结果（带参数）',
+        target_url: 'https://example.com/search?q={keyword}',
+        method: 'GET',
+        mode: 'browser',
+        api_type: 'proxy',
+        selectors: { results: '.search-result', count: '.result-count' },
+        description: '带占位符的搜索，调用时传入 ?keyword=xxx 替换'
+    }
+];
+
+// 帮助文案配置
+const HELP_TEXTS = {
+    // 采集模式
+    mode_cookie: '快速模式：复用登录凭证，速度快（毫秒级），适合大多数网站',
+    mode_browser: '完整模式：真实浏览器访问，速度慢（秒级）但更稳定，适合反爬严格的网站',
+    // 接口类型
+    api_proxy: '返回 JSON 格式，包含状态码、响应头、提取的数据等结构化信息',
+    api_raw: '返回网站原始内容（HTML/JSON/图片等），适合需要完整响应的场景',
+    api_reader: '返回处理后的干净 HTML，去除广告和干扰元素，适合阅读类应用',
+    // 代理模式
+    proxy_none: '直接连接目标网站，不使用代理',
+    proxy_pool: '从代理池中自动轮换 IP，适合需要大量请求的场景',
+    proxy_fixed: '使用指定的代理 IP，适合需要固定出口 IP 的场景',
+    // 其他
+    is_public: '公开：任何人无需密钥即可调用；私有：需要 API Key 才能访问',
+    wait_for: '等待页面中某个元素出现后再采集，确保动态内容加载完成',
+    cache_ttl: '相同请求在此时间内返回缓存结果，0 表示不缓存',
+    selectors: 'CSS 选择器用于从页面提取特定内容，如 h1 表示标题，.price 表示价格',
+    permlink: '专属链接，通过 GET 请求即可获取数据，支持传参替换占位符'
+};
+
 // 导出到全局
 window.CFComponents = {
     LineChart,
-    DonutChart
+    DonutChart,
+    HelpTip,
+    SELECTOR_TEMPLATES,
+    EXAMPLE_RULES,
+    HELP_TEXTS
 };

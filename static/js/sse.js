@@ -46,9 +46,13 @@ class SSEManager {
             }
         };
 
-        this.eventSource.onerror = () => {
-            this.closeStream();
-            callbacks.onError?.();
+        this.eventSource.onerror = (e) => {
+            // 只有在连接已经建立后断开才触发错误回调
+            // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSED
+            if (this.eventSource && this.eventSource.readyState === EventSource.CLOSED) {
+                this.closeStream();
+                callbacks.onError?.();
+            }
         };
     }
 

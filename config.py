@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     BROWSER_POOL_MAX: int = 3  # 最大浏览器数量
     BROWSER_POOL_IDLE_TIMEOUT: int = 300  # 空闲超时回收时间 (秒)
 
+    # 凭证自动刷新配置
+    AUTO_REFRESH_CREDENTIALS: bool = True  # 是否自动刷新即将过期的凭证
+
     class Config:
         env_file = ".env"
 

@@ -36,6 +36,8 @@ def init_config():
             settings.BROWSER_POOL_MAX = config["browser_pool_max"]
         if "browser_pool_idle_timeout" in config:
             settings.BROWSER_POOL_IDLE_TIMEOUT = config["browser_pool_idle_timeout"]
+        if "auto_refresh_credentials" in config:
+            settings.AUTO_REFRESH_CREDENTIALS = config["auto_refresh_credentials"]
 
         log.info(f"[ConfigStore] 已加载持久化配置: {config}")
     except Exception as e:

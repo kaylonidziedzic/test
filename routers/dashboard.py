@@ -22,7 +22,7 @@ from services.domain_intelligence import domain_intel
 from services import config_store
 from utils.logger import log
 
-router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"], dependencies=[Depends(verify_admin_flexible)])
+router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 # 启动时间
 _start_time = time.time()
@@ -206,7 +206,7 @@ def get_domain_intelligence() -> Dict[str, Any]:
     }
 
 
-@router.post("/domain-intelligence/reset", dependencies=[Depends(verify_api_key)])
+@router.post("/domain-intelligence/reset", dependencies=[Depends(verify_admin)])
 def reset_domain_intelligence(domain: Optional[str] = None) -> Dict[str, Any]:
     """重置域名智能学习数据
 
@@ -231,6 +231,7 @@ class ConfigUpdate(BaseModel):
     browser_pool_min: Optional[int] = None
     browser_pool_max: Optional[int] = None
     browser_pool_idle_timeout: Optional[int] = None
+    auto_refresh_credentials: Optional[bool] = None
 
 
 @router.get("/config", dependencies=[Depends(verify_api_key)])
@@ -244,10 +245,11 @@ def get_config() -> Dict[str, Any]:
         "browser_pool_min": settings.BROWSER_POOL_MIN,
         "browser_pool_max": settings.BROWSER_POOL_MAX,
         "browser_pool_idle_timeout": settings.BROWSER_POOL_IDLE_TIMEOUT,
+        "auto_refresh_credentials": settings.AUTO_REFRESH_CREDENTIALS,
     }
 
 
-@router.put("/config", dependencies=[Depends(verify_api_key)])
+@router.put("/config", dependencies=[Depends(verify_admin)])
 def update_config(config: ConfigUpdate) -> Dict[str, Any]:
     """更新配置（运行时生效，同时持久化到文件）"""
     updated = {}
@@ -284,6 +286,10 @@ def update_config(config: ConfigUpdate) -> Dict[str, Any]:
         browser_pool.idle_timeout = config.browser_pool_idle_timeout
         updated["browser_pool_idle_timeout"] = config.browser_pool_idle_timeout
 
+    if config.auto_refresh_credentials is not None:
+        settings.AUTO_REFRESH_CREDENTIALS = config.auto_refresh_credentials
+        updated["auto_refresh_credentials"] = config.auto_refresh_credentials
+
     # 持久化保存到文件
     if updated:
         current_config = get_config()
@@ -302,10 +308,18 @@ def export_config() -> Dict[str, Any]:
 # ========== 操作 API ==========
 
 @router.get("/logs", dependencies=[Depends(verify_api_key)])
-def get_logs(limit: int = 100, user: Optional[str] = None) -> Dict[str, List[Dict]]:
-    """获取实时日志，返回全局与用户分桶，便于前端分栏展示"""
+def get_logs(request: Request, limit: int = 100, user: Optional[str] = None) -> Dict[str, List[Dict]]:
+    """获取实时日志，返回全局与用户分桶，便于前端分栏展示
+
+    非管理员用户只能查看自己的日志，全局日志返回空列表
+    """
     import os
     log_file = "logs/server.log"
+
+    # 获取当前用户信息
+    current_user = getattr(request.state, "api_user", None)
+    is_admin = current_user.get("role") == "admin" if current_user else False
+    username = current_user.get("user") if current_user else None
 
     if not os.path.exists(log_file):
         return {"all": [], "user": []}
@@ -315,8 +329,15 @@ def get_logs(limit: int = 100, user: Optional[str] = None) -> Dict[str, List[Dic
             lines = f.readlines()
 
         recent_lines = lines[-limit:] if len(lines) > limit else lines
-        all_logs = _parse_log_lines(recent_lines, None)
-        user_logs = _parse_log_lines(recent_lines, user) if user else []
+
+        # 管理员可以看到全局日志，普通用户只能看到自己的日志
+        if is_admin:
+            all_logs = _parse_log_lines(recent_lines, None)
+            user_logs = _parse_log_lines(recent_lines, user) if user else []
+        else:
+            # 非管理员：全局日志返回空，用户日志强制使用当前用户名
+            all_logs = []
+            user_logs = _parse_log_lines(recent_lines, username) if username else []
 
         return {"all": all_logs, "user": user_logs}
     except Exception as e:
@@ -324,7 +345,7 @@ def get_logs(limit: int = 100, user: Optional[str] = None) -> Dict[str, List[Dic
         return {"all": [], "user": []}
 
 
-@router.post("/cache/clear", dependencies=[Depends(verify_api_key)])
+@router.post("/cache/clear", dependencies=[Depends(verify_admin)])
 def clear_cache(domain: Optional[str] = None) -> Dict[str, Any]:
     """清除缓存"""
     if domain:
@@ -335,7 +356,7 @@ def clear_cache(domain: Optional[str] = None) -> Dict[str, Any]:
         return {"message": f"已清除 {count} 条缓存", "count": count}
 
 
-@router.post("/browser-pool/restart", dependencies=[Depends(verify_api_key)])
+@router.post("/browser-pool/restart", dependencies=[Depends(verify_admin)])
 def restart_browser_pool() -> Dict[str, Any]:
     """重启浏览器池"""
     browser_pool.shutdown()
@@ -343,7 +364,7 @@ def restart_browser_pool() -> Dict[str, Any]:
     return {"message": "浏览器池已重启，下次请求时将重新初始化"}
 
 
-@router.post("/proxies/reload", dependencies=[Depends(verify_api_key)])
+@router.post("/proxies/reload", dependencies=[Depends(verify_admin)])
 def reload_proxies() -> Dict[str, Any]:
     """重载代理列表"""
     proxy_manager.reload()
@@ -371,7 +392,7 @@ class ProxyRemove(BaseModel):
     proxy: str
 
 
-@router.post("/proxies", dependencies=[Depends(verify_api_key)])
+@router.post("/proxies", dependencies=[Depends(verify_admin)])
 def add_proxies(req: ProxiesAdd) -> Dict[str, Any]:
     """添加代理到列表"""
     added = proxy_manager.add_proxies(req.proxies)
@@ -382,7 +403,7 @@ def add_proxies(req: ProxiesAdd) -> Dict[str, Any]:
     }
 
 
-@router.delete("/proxies", dependencies=[Depends(verify_api_key)])
+@router.delete("/proxies", dependencies=[Depends(verify_admin)])
 def remove_proxy(req: ProxyRemove) -> Dict[str, Any]:
     """从列表中删除代理"""
     removed = proxy_manager.remove_proxy(req.proxy)
@@ -450,34 +471,51 @@ def test_bypass(req: TestRequest, request: Request) -> Dict[str, Any]:
         result = None
         if req.api_type == "raw":
             resp = execute_rule_raw(config)
-            # raw 无法直接返回 JSON，这里做个特殊处理，转为 meta 信息
+            # raw 返回二进制信息
+            body_preview = ""
+            try:
+                body_preview = resp.body[:500].decode('utf-8', errors='ignore') if isinstance(resp.body, bytes) else str(resp.body)[:500]
+            except:
+                body_preview = "(二进制内容)"
             result = {
                 "success": 200 <= resp.status_code < 300,
                 "status": resp.status_code,
-                "data": {"message": "Binary/Raw content returned"},
+                "data": {"preview": body_preview + ("..." if len(resp.body) > 500 else "")},
                 "raw_length": len(resp.body),
                 "headers": dict(resp.headers)
             }
         elif req.api_type == "reader":
             resp = execute_rule_reader(config)
+            # reader 返回 HTML 内容预览
+            body_str = resp.body.decode('utf-8', errors='ignore') if isinstance(resp.body, bytes) else str(resp.body)
+            # 提取文本内容（去除 HTML 标签）
+            import re
+            text_content = re.sub(r'<[^>]+>', ' ', body_str)
+            text_content = ' '.join(text_content.split())[:500]
             result = {
                 "success": 200 <= resp.status_code < 300,
                 "status": resp.status_code,
-                "data": {"content": "HTML Content"},
-                "text": str(resp.body)[:1000] + "...", # 截断显示
+                "data": {"text_preview": text_content + ("..." if len(body_str) > 500 else "")},
                 "raw_length": len(resp.body),
                 "headers": dict(resp.headers)
             }
         else: # proxy
             exec_result = execute_rule_proxy(config)
+            # execute_rule_proxy 返回格式: {success, data, meta: {status, ...}, raw_length, cookies_count}
+            meta = exec_result.get("meta", {})
+            status_code = meta.get("status", 200)
+            data = exec_result.get("data", {})
+
+            # 如果没有提取到数据（没有配置 selectors），显示提示信息
+            if not data:
+                data = {"提示": "未配置选择器，使用「新建规则」添加 CSS 选择器来提取特定内容"}
+
             result = {
-                "success": 200 <= exec_result.get("status", 500) < 300,
-                "status": exec_result.get("status"),
-                "data": exec_result.get("data"),
+                "success": exec_result.get("success", False),
+                "status": status_code,
+                "data": data,
                 "raw_length": exec_result.get("raw_length"),
-                "headers": exec_result.get("headers"),
-                "cookies": exec_result.get("cookies"),
-                "cookies_count": len(exec_result.get("cookies") or {})
+                "cookies_count": exec_result.get("cookies_count", 0)
             }
 
         duration = time.time() - start
@@ -575,7 +613,10 @@ def _format_uptime(seconds: float) -> str:
 
 # ========== SSE 流式接口 ==========
 def _snapshot_state() -> Dict[str, Any]:
-    """聚合状态数据供前端实时更新"""
+    """聚合状态数据供前端实时更新
+
+    注意：日志通过专用的 /logs/stream 端点获取，此处不包含
+    """
     return {
         "status": _status_payload(),
         "stats": get_stats(),
@@ -584,7 +625,6 @@ def _snapshot_state() -> Dict[str, Any]:
         "history": get_request_history(limit=50),
         "system": get_system_info(),
         "browser_pool": get_browser_pool_status(),
-        "logs": get_logs(limit=100),
     }
 
 

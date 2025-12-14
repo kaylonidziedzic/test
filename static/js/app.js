@@ -53,7 +53,10 @@ const app = createApp({
                 }
             }
             if (data.stats) Object.assign(state.stats, data.stats);
-            if (data.config) Object.assign(state.config, data.config);
+            // 当用户在配置页面时，不覆盖 config（避免用户编辑时被覆盖）
+            if (data.config && state.activeTab.value !== 'config') {
+                Object.assign(state.config, data.config);
+            }
             if (Array.isArray(data.time_series)) {
                 state.timeSeries.splice(0, state.timeSeries.length, ...data.time_series);
             }
@@ -85,7 +88,10 @@ const app = createApp({
 
                 Object.assign(state.status, s);
                 Object.assign(state.stats, st);
-                Object.assign(state.config, c);
+                // 当用户在配置页面时，不覆盖 config（避免用户编辑时被覆盖）
+                if (state.activeTab.value !== 'config') {
+                    Object.assign(state.config, c);
+                }
                 state.timeSeries.splice(0, state.timeSeries.length, ...ts);
                 state.requestHistory.splice(0, state.requestHistory.length, ...h);
                 Object.assign(state.systemInfo, sys);
@@ -161,12 +167,7 @@ const app = createApp({
                 const s = await api.getStatus();
                 Object.assign(state.status, s);
 
-                if (state.status.current_user?.role !== 'admin') {
-                    state.loginError.value = '非管理员无权访问控制台';
-                    state.authenticated.value = false;
-                    return;
-                }
-
+                // 移除管理员限制，允许所有用户登录
                 state.authenticated.value = true;
                 localStorage.setItem('apiKey', state.apiKey.value);
                 await loadData();
@@ -660,8 +661,58 @@ const app = createApp({
             state.selectedRequest.value = req;
         };
 
+        // ========== 示例规则和选择器模板 ==========
+        const selectorTemplates = CFComponents.SELECTOR_TEMPLATES;
+        const exampleRules = CFComponents.EXAMPLE_RULES;
+        const helpTexts = CFComponents.HELP_TEXTS;
+
+        // 应用选择器模板
+        const applySelectorTemplate = (template) => {
+            // 检查是否已存在相同 key
+            const exists = state.ruleForm.selectors.find(s => s.key === template.key);
+            if (exists) {
+                exists.selector = template.selector;
+                showToast(`已更新选择器: ${template.name}`, 'info');
+            } else {
+                state.ruleForm.selectors.push({ key: template.key, selector: template.selector });
+                showToast(`已添加选择器: ${template.name}`, 'success');
+            }
+        };
+
+        // 应用示例规则
+        const applyExampleRule = (example) => {
+            state.ruleForm.name = example.name;
+            state.ruleForm.target_url = example.target_url;
+            state.ruleForm.method = example.method || 'GET';
+            state.ruleForm.mode = example.mode || 'cookie';
+            state.ruleForm.api_type = example.api_type || 'proxy';
+            state.ruleForm.is_public = example.is_public || false;
+            state.ruleForm.proxy_mode = example.proxy_mode || 'none';
+            state.ruleForm.proxy = example.proxy || '';
+            state.ruleForm.wait_for = example.wait_for || '';
+            state.ruleForm.cache_ttl = example.cache_ttl || 0;
+            state.ruleForm.body_type = example.body_type || 'none';
+            state.ruleForm.body = example.body || '';
+            state.ruleForm.headers_list = [];
+
+            // 转换 selectors
+            state.ruleForm.selectors = [];
+            if (example.selectors && typeof example.selectors === 'object') {
+                for (const [key, selector] of Object.entries(example.selectors)) {
+                    state.ruleForm.selectors.push({ key, selector });
+                }
+            }
+
+            showToast(`已加载示例: ${example.name}`, 'success');
+        };
+
+        // 获取帮助文本
+        const getHelpText = (key) => {
+            return helpTexts[key] || '';
+        };
+
         // 监听标签页变化
-        watch(() => state.activeTab.value, (newTab) => {
+        watch(() => state.activeTab.value, async (newTab) => {
             localStorage.setItem('activeTab', newTab);
             if (newTab === 'logs') {
                 connectLogStream();
@@ -673,6 +724,15 @@ const app = createApp({
             }
             if (newTab === 'proxies') {
                 loadProxies();
+            }
+            // 首次进入配置页面时加载配置（如果 config 为空）
+            if (newTab === 'config' && Object.keys(state.config).length === 0) {
+                try {
+                    const c = await api.getConfig();
+                    Object.assign(state.config, c);
+                } catch (e) {
+                    console.error('Failed to load config:', e);
+                }
             }
         });
 
@@ -770,6 +830,14 @@ const app = createApp({
             clearLogs,
             showRequestDetail,
 
+            // 示例规则和选择器模板
+            selectorTemplates,
+            exampleRules,
+            helpTexts,
+            applySelectorTemplate,
+            applyExampleRule,
+            getHelpText,
+
             // 工具函数
             formatBytes: utils.formatBytes,
             formatRuleTime: utils.formatRuleTime,
@@ -781,6 +849,7 @@ const app = createApp({
 // 注册组件
 app.component('line-chart', CFComponents.LineChart);
 app.component('donut-chart', CFComponents.DonutChart);
+app.component('help-tip', CFComponents.HelpTip);
 
 // 挂载应用
 app.mount('#app');

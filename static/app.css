@@ -137,3 +137,24 @@ code {
         opacity: 0.5;
     }
 }
+
+/* 文本行数限制 */
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Tooltip 白边避免位移 */
+.whitespace-nowrap {
+    white-space: nowrap;
+}
+
+/* 下拉菜单动画 */
+.group:hover .group-hover\:visible {
+    visibility: visible;
+}
+.group:hover .group-hover\:opacity-100 {
+    opacity: 1;
+}

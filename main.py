@@ -22,7 +22,7 @@ from utils.logger import log
 
 
 async def watchdog_task():
-    """后台看门狗任务：定期清理空闲浏览器、清理过期缓存、监控内存、自动刷新凭证"""
+    """后台看门狗任务：定期清理空闲浏览器、清理过期缓存、监控内存"""
     while True:
         await asyncio.sleep(settings.WATCHDOG_INTERVAL)
         try:
@@ -51,16 +51,17 @@ async def watchdog_task():
             if expired > 0:
                 log.info(f"[Watchdog] 清理了 {expired} 条过期缓存")
 
-            # 5. 主动刷新即将过期的凭证（5分钟内过期）
-            expiring_domains = credential_cache.get_expiring_domains(threshold_seconds=300)
-            if expiring_domains:
-                log.info(f"[Watchdog] 发现 {len(expiring_domains)} 个即将过期的凭证，开始刷新...")
-                for domain in expiring_domains[:3]:  # 每次最多刷新3个，避免阻塞太久
-                    success = credential_cache.refresh_credential(domain)
-                    if success:
-                        log.info(f"[Watchdog] 凭证已提前刷新: {domain}")
-                    else:
-                        log.warning(f"[Watchdog] 凭证刷新失败: {domain}")
+            # 5. 主动刷新即将过期的凭证（5分钟内过期）- 可通过配置开关控制
+            if settings.AUTO_REFRESH_CREDENTIALS:
+                expiring_domains = credential_cache.get_expiring_domains(threshold_seconds=300)
+                if expiring_domains:
+                    log.info(f"[Watchdog] 发现 {len(expiring_domains)} 个即将过期的凭证，开始刷新...")
+                    for domain in expiring_domains[:3]:  # 每次最多刷新3个，避免阻塞太久
+                        success = credential_cache.refresh_credential(domain)
+                        if success:
+                            log.info(f"[Watchdog] 凭证已提前刷新: {domain}")
+                        else:
+                            log.warning(f"[Watchdog] 凭证刷新失败: {domain}")
 
             # 6. 清理过期的域名智能统计
             intel_cleaned = domain_intel.cleanup_expired()
@@ -77,6 +78,11 @@ async def lifespan(app: FastAPI):
     # 启动时：加载持久化配置
     log.info("[Startup] 加载持久化配置...")
     config_store.init_config()
+
+    # 预热浏览器池（如果 min_size > 0）
+    if settings.BROWSER_POOL_MIN > 0:
+        log.info("[Startup] 预热浏览器池...")
+        browser_pool._init_pool()
 
     log.info("[Startup] 启动看门狗任务...")
     task = asyncio.create_task(watchdog_task())

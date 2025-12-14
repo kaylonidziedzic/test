@@ -15,13 +15,14 @@ from config import settings
 from core.browser_pool import browser_pool
 from routers import dashboard, health, proxy, raw, reader, job, runner
 from services.cache_service import credential_cache
+from services.domain_intelligence import domain_intel
 from services import config_store
 
 from utils.logger import log
 
 
 async def watchdog_task():
-    """后台看门狗任务：定期清理空闲浏览器、清理过期缓存、监控内存"""
+    """后台看门狗任务：定期清理空闲浏览器、清理过期缓存、监控内存、自动刷新凭证"""
     while True:
         await asyncio.sleep(settings.WATCHDOG_INTERVAL)
         try:
@@ -49,6 +50,22 @@ async def watchdog_task():
             expired = credential_cache.cleanup_expired()
             if expired > 0:
                 log.info(f"[Watchdog] 清理了 {expired} 条过期缓存")
+
+            # 5. 主动刷新即将过期的凭证（5分钟内过期）
+            expiring_domains = credential_cache.get_expiring_domains(threshold_seconds=300)
+            if expiring_domains:
+                log.info(f"[Watchdog] 发现 {len(expiring_domains)} 个即将过期的凭证，开始刷新...")
+                for domain in expiring_domains[:3]:  # 每次最多刷新3个，避免阻塞太久
+                    success = credential_cache.refresh_credential(domain)
+                    if success:
+                        log.info(f"[Watchdog] 凭证已提前刷新: {domain}")
+                    else:
+                        log.warning(f"[Watchdog] 凭证刷新失败: {domain}")
+
+            # 6. 清理过期的域名智能统计
+            intel_cleaned = domain_intel.cleanup_expired()
+            if intel_cleaned > 0:
+                log.info(f"[Watchdog] 清理了 {intel_cleaned} 条过期域名统计")
 
         except Exception as e:
             log.error(f"[Watchdog] 任务异常: {e}")
@@ -79,7 +96,49 @@ async def lifespan(app: FastAPI):
     browser_pool.shutdown()
 
 
-app = FastAPI(title=settings.API_TITLE, version="2.0.0", lifespan=lifespan)
+app = FastAPI(
+    title=settings.API_TITLE,
+    version="2.0.0",
+    description="""
+## CF-Gateway Pro
+
+**Cloudflare 绕过网关** - 提供高性能的 Cloudflare 保护站点访问能力。
+
+### 主要功能
+
+- 🍪 **Cookie 复用模式**: 浏览器过盾后复用 Cookie，高效访问
+- 🌐 **浏览器直读模式**: 实时浏览器渲染，确保成功率
+- 🔄 **智能降级**: Cookie 失效自动切换浏览器模式
+- 📊 **规则系统**: 可视化配置爬虫规则
+- 🔑 **多用户支持**: API Key 鉴权与权限管理
+
+### 快速开始
+
+1. 获取 API Key（联系管理员）
+2. 在请求头添加 `X-API-KEY: your_key`
+3. 调用 `/v1/proxy` 接口代理请求
+
+### API 分类
+
+- **Health**: 健康检查接口
+- **Proxy**: 代理请求接口（返回 JSON）
+- **Raw**: 原始响应接口（返回原始内容）
+- **Reader**: 阅读模式接口（返回处理后的 HTML）
+- **Runner**: 规则执行接口（Permlink）
+- **Dashboard**: 管理面板 API
+""",
+    openapi_tags=[
+        {"name": "Health", "description": "健康检查接口，用于监控和探测"},
+        {"name": "Proxy", "description": "代理请求接口，返回 JSON 格式响应"},
+        {"name": "Raw", "description": "原始响应接口，返回目标站点原始内容"},
+        {"name": "Reader", "description": "阅读模式接口，返回处理后的 HTML"},
+        {"name": "Runner", "description": "规则执行接口，通过 Permlink 执行预定义规则"},
+        {"name": "Dashboard", "description": "管理面板 API，需要管理员权限"},
+    ],
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
 # Register routers
 app.include_router(health.router)

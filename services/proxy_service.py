@@ -34,6 +34,7 @@
 from typing import Any, Dict, Optional, Union
 
 from core.fetchers import CookieFetcher, BrowserFetcher, FetchResponse
+from services.domain_intelligence import domain_intel
 from utils.logger import log
 
 
@@ -92,11 +93,23 @@ BROWSER_DIRECT_DOMAINS = [
 ]
 
 
-def _should_use_browser(hostname: str) -> bool:
-    """判断是否应该使用浏览器直读"""
+def _should_use_browser(hostname: str, url: str = None) -> bool:
+    """判断是否应该使用浏览器直读
+
+    检查顺序：
+    1. 域名白名单
+    2. 智能学习推荐
+    """
+    # 检查白名单
     for domain in BROWSER_DIRECT_DOMAINS:
         if domain in hostname:
             return True
+
+    # 检查智能学习推荐
+    if url and domain_intel.should_use_browser(url):
+        log.info(f"[ProxyService] 智能学习推荐 {hostname} 使用浏览器模式")
+        return True
+
     return False
 
 
@@ -166,17 +179,20 @@ def proxy_request(
         selected_fetcher = _browser_fetcher
         use_fallback = False
         log.info(f"[ProxyService] 使用代理模式，直接使用 BrowserFetcher")
-    elif _should_use_browser(hostname):
-        # 域名白名单匹配，直接使用浏览器
+    elif _should_use_browser(hostname, url):
+        # 域名白名单或智能学习匹配，直接使用浏览器
         selected_fetcher = _browser_fetcher
         use_fallback = False
-        log.info(f"[ProxyService] 域名 {hostname} 匹配浏览器直读规则")
+        log.info(f"[ProxyService] 域名 {hostname} 使用浏览器模式")
     else:
         # 默认使用 Cookie 方式，支持自动降级
         selected_fetcher = _default_fetcher
         use_fallback = auto_fallback
 
     log.info(f"[ProxyService] 使用 {selected_fetcher.name} 处理请求: {url}")
+
+    # 记录使用的模式（用于智能学习）
+    used_mode = "browser" if selected_fetcher == _browser_fetcher else "cookie"
 
     # 执行请求
     try:
@@ -195,15 +211,34 @@ def proxy_request(
         # 检查是否被拦截（即使返回了响应）
         if use_fallback and _is_response_blocked(response):
             log.warning(f"[ProxyService] CookieFetcher 返回被拦截，降级到 BrowserFetcher")
-            return _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
+            # 记录 Cookie 模式失败
+            domain_intel.record_request(url, "cookie", success=False)
+            fallback_response = _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
+            # 记录 Browser 模式结果
+            is_success = not _is_response_blocked(fallback_response)
+            domain_intel.record_request(url, "browser", success=is_success)
+            return fallback_response
 
+        # 记录成功
+        domain_intel.record_request(url, used_mode, success=True)
         return response
 
     except Exception as e:
+        # 记录失败
+        domain_intel.record_request(url, used_mode, success=False)
+
         # CookieFetcher 异常，尝试降级
         if use_fallback:
             log.warning(f"[ProxyService] CookieFetcher 异常: {e}，降级到 BrowserFetcher")
-            return _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
+            try:
+                fallback_response = _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
+                # 记录 Browser 模式结果
+                is_success = not _is_response_blocked(fallback_response)
+                domain_intel.record_request(url, "browser", success=is_success)
+                return fallback_response
+            except Exception as fallback_e:
+                domain_intel.record_request(url, "browser", success=False)
+                raise fallback_e
         raise
 
 

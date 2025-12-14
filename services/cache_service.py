@@ -47,7 +47,17 @@ class BaseCache(ABC):
     @abstractmethod
     def get_stats(self) -> Dict[str, Any]:
         pass
-    
+
+    @abstractmethod
+    def get_expiring_domains(self, threshold_seconds: int = 300) -> List[str]:
+        """获取即将过期的域名列表（用于主动刷新）"""
+        pass
+
+    @abstractmethod
+    def refresh_credential(self, domain: str) -> bool:
+        """主动刷新指定域名的凭证"""
+        pass
+
     def _extract_domain(self, url: str) -> str:
         return urlparse(url).netloc
 
@@ -193,6 +203,52 @@ class SQLiteCache(BaseCache):
             finally:
                 conn.close()
 
+    def get_expiring_domains(self, threshold_seconds: int = 300) -> List[str]:
+        """获取即将过期的域名列表"""
+        with self._lock:
+            conn = self._get_conn()
+            try:
+                now = time.time()
+                threshold_time = now + threshold_seconds
+                cursor = conn.execute(
+                    "SELECT domain FROM credentials WHERE expire_at > ? AND expire_at < ?",
+                    (now, threshold_time)
+                )
+                domains = [row[0] for row in cursor.fetchall()]
+                return domains
+            finally:
+                conn.close()
+
+    def refresh_credential(self, domain: str) -> bool:
+        """主动刷新指定域名的凭证"""
+        try:
+            url = f"https://{domain}/"
+            log.info(f"[Cache:SQLite] 主动刷新凭证: {domain}")
+            creds = solve_turnstile(url)
+            now = time.time()
+
+            with self._lock:
+                conn = self._get_conn()
+                try:
+                    conn.execute("""
+                        INSERT OR REPLACE INTO credentials (domain, cookies, ua, expire_at, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        domain,
+                        json.dumps(creds["cookies"]),
+                        creds["ua"],
+                        now + self.expire_seconds,
+                        now
+                    ))
+                    conn.commit()
+                    log.info(f"[Cache:SQLite] 凭证刷新成功: {domain}")
+                finally:
+                    conn.close()
+            return True
+        except Exception as e:
+            log.error(f"[Cache:SQLite] 凭证刷新失败: {domain}, 错误: {e}")
+            return False
+
 
 class RedisCache(BaseCache):
     """Redis 缓存实现 (分布式模式)"""
@@ -273,6 +329,40 @@ class RedisCache(BaseCache):
         except redis.RedisError as e:
             log.error(f"[Cache:Redis] 获取统计失败: {e}")
             return {"type": "redis", "error": str(e)}
+
+    def get_expiring_domains(self, threshold_seconds: int = 300) -> List[str]:
+        """获取即将过期的域名列表（TTL 小于阈值）"""
+        try:
+            keys = self.redis_client.keys(f"{self.prefix}*")
+            expiring = []
+            for key in keys:
+                ttl = self.redis_client.ttl(key)
+                if 0 < ttl < threshold_seconds:
+                    domain = key.replace(self.prefix, "")
+                    expiring.append(domain)
+            return expiring
+        except redis.RedisError as e:
+            log.error(f"[Cache:Redis] 获取即将过期域名失败: {e}")
+            return []
+
+    def refresh_credential(self, domain: str) -> bool:
+        """主动刷新指定域名的凭证"""
+        try:
+            url = f"https://{domain}/"
+            log.info(f"[Cache:Redis] 主动刷新凭证: {domain}")
+            creds = solve_turnstile(url)
+
+            key = self._get_key(domain)
+            self.redis_client.setex(
+                key,
+                self.expire_seconds,
+                json.dumps(creds)
+            )
+            log.info(f"[Cache:Redis] 凭证刷新成功: {domain}")
+            return True
+        except Exception as e:
+            log.error(f"[Cache:Redis] 凭证刷新失败: {domain}, 错误: {e}")
+            return False
 
 
 # 工厂函数

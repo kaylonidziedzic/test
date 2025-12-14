@@ -17,8 +17,8 @@ from core.browser_pool import browser_pool
 from dependencies import verify_admin_flexible, verify_api_key, verify_query_key, verify_admin
 from services import api_key_store
 from services.cache_service import credential_cache
-from services.cache_service import credential_cache
 from services.proxy_manager import proxy_manager
+from services.domain_intelligence import domain_intel
 from services import config_store
 from utils.logger import log
 
@@ -188,6 +188,37 @@ def get_browser_pool_status() -> Dict[str, Any]:
 def get_cache_status() -> Dict[str, Any]:
     """获取缓存详细状态"""
     return credential_cache.get_stats()
+
+
+# ========== 域名智能学习 API ==========
+
+@router.get("/domain-intelligence", dependencies=[Depends(verify_api_key)])
+def get_domain_intelligence() -> Dict[str, Any]:
+    """获取域名智能学习统计
+
+    返回各域名的请求成功/失败统计，以及系统推荐的访问模式。
+    """
+    stats = domain_intel.get_all_stats()
+    return {
+        "domains": stats,
+        "total_domains": len(stats),
+        "browser_recommended": sum(1 for s in stats if s["recommended_mode"] == "browser"),
+    }
+
+
+@router.post("/domain-intelligence/reset", dependencies=[Depends(verify_api_key)])
+def reset_domain_intelligence(domain: Optional[str] = None) -> Dict[str, Any]:
+    """重置域名智能学习数据
+
+    Args:
+        domain: 指定域名则只重置该域名，不指定则重置所有
+    """
+    if domain:
+        success = domain_intel.reset_domain(f"https://{domain}/")
+        return {"message": f"域名 {domain} 统计已重置" if success else f"域名 {domain} 无统计数据", "success": success}
+    else:
+        count = domain_intel.reset_all()
+        return {"message": f"已重置 {count} 条域名统计", "count": count}
 
 
 # ========== 配置管理 API ==========

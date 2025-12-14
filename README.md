@@ -1,114 +1,322 @@
-# CF-Gateway 🛡️🚀
+# CF-Gateway Pro
 
-Cloudflare Turnstile 过盾、代理与可视化管理一体化方案。基于 FastAPI + DrissionPage + curl_cffi，提供统一代理、阅读模式与可视化控制台（Vue 单页，SSE 实时）。
+<div align="center">
 
-> 👉 更多操作手册/FAQ 见 `docs/WIKI.md`
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9+-green.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)
+![License](https://img.shields.io/badge/license-MIT-yellow.svg)
 
-## ✨ 特性
-- 🧠 自动过盾：内置浏览器池 + 指纹随机化，`/test`/`/test/batch` 一键验证。
-- 🔒 多用户密钥：`data/api_keys.json` / `API_KEYS_JSON` 配置；控制台仅限 `admin`。
-- 📊 可视化：监控、实例池、缓存、配置、日志双栏（全局/用户），SSE 优先。
-- 🧰 多协议代理：JSON 代理 `/v1/proxy`，原始 `/raw`，阅读 `/reader`。
-- 🛠️ 运行时配置：浏览器池/指纹/内存/缓存时效在线调整（重启恢复默认）。
+**高性能 Cloudflare 绕过网关** | 智能过盾 | 代理服务 | 可视化管理
 
-## 🏗️ 结构
+[快速开始](#-快速开始) · [API 文档](#-api-文档) · [功能特性](#-功能特性) · [Wiki](docs/WIKI.md)
+
+</div>
+
+---
+
+## 功能特性
+
+<table>
+<tr>
+<td width="50%">
+
+### 核心能力
+- **智能过盾** - 自动绕过 Cloudflare Turnstile 验证
+- **Cookie 复用** - 高效缓存，减少过盾次数
+- **浏览器直读** - 实时渲染确保成功率
+- **智能降级** - Cookie 失效自动切换模式
+
+</td>
+<td width="50%">
+
+### 高级特性
+- **域名智能学习** - 自动识别最佳访问策略
+- **Cookie 自动刷新** - 后台提前刷新即将过期凭证
+- **代理支持** - IP 池轮换，突破访问限制
+- **规则系统** - 可视化配置爬虫规则
+
+</td>
+</tr>
+</table>
+
+### 管理能力
+
+| 功能 | 说明 |
+|------|------|
+| **可视化控制台** | Vue 单页应用，SSE 实时数据推送 |
+| **多用户权限** | admin/user 角色分离，API Key 管理 |
+| **健康监控** | Redis、浏览器池、缓存状态全面监控 |
+| **运行时配置** | 在线调整参数，无需重启服务 |
+
+---
+
+## 快速开始
+
+### 1. 配置密钥
+
+创建 `data/api_keys.json`：
+
+```json
+[
+  {"user": "admin", "key": "your-secure-admin-key-here", "role": "admin"},
+  {"user": "client", "key": "your-secure-client-key", "role": "user"}
+]
 ```
-.
-├── main.py                    # FastAPI 入口
-├── routers/                   # dashboard / health / proxy / raw / reader
-├── services/                  # proxy_service, api_key_store, cache_service
-├── core/                      # 浏览器池、过盾 solver
-├── schemas/                   # Pydantic 模型
-├── utils/                     # 日志、响应构造
-├── static/                    # 前端 Vue 单页
-├── data/                      # api_keys.json, cache.db 等持久化
-├── Dockerfile                 # 生产镜像（含 Chrome）
-├── docker-compose*.yml        # 部署与本地开发（override 启用热重载）
-└── docs/STRUCTURE.md          # 结构说明
+
+### 2. 启动服务
+
+```bash
+# 生产环境
+docker-compose up -d
+
+# 开发环境（热重载）
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
 ```
 
-## 🚀 快速上手
-1. 配置密钥（推荐）  
-   `data/api_keys.json`：
-   ```json
-   [
-     {"user": "owner", "key": "请改为强随机", "role": "admin"},
-     {"user": "client", "key": "请改为随机", "role": "user"}
-   ]
-   ```
-   或环境变量：`API_KEYS_JSON='[{"user":"owner","key":"xxx","role":"admin"}]'`  
-   若 env/file 均为空才回退 `config.py` 的 `API_KEY`。
+### 3. 访问服务
 
-2. 启动
-   ```bash
-   docker-compose up -d                # 生产
-   # 本地热重载（含前端挂载）：
-   docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
-   ```
+| 地址 | 说明 |
+|------|------|
+| `http://localhost:8000/dashboard` | 管理控制台（需 admin 权限） |
+| `http://localhost:8000/docs` | Swagger API 文档 |
+| `http://localhost:8000/redoc` | ReDoc API 文档 |
+| `http://localhost:8000/health` | 健康检查 |
 
-3. 访问控制台  
-   `http://<主机IP>:8000/dashboard`，使用 admin key 登录。
+---
 
-4. 前端开发  
-   `static` 已挂载，改动刷新即见；后端 `uvicorn --reload` 自动重载。
+## API 文档
 
-## 🔑 鉴权与角色
-- Header：`X-API-KEY: <key>`（控制台/代理默认）
-- Query：`?key=<key>`（/raw、/reader、SSE 兼容）
-- 角色：`admin` 可登录控制台与用户管理；`user` 仅可调用业务 API。
+### 代理接口
 
-## 🧭 核心接口（摘录）
-> 所有返回均为 JSON，除 `/raw`/`/reader` 直接回源内容。
+```bash
+# JSON 代理请求
+curl -X POST http://localhost:8000/v1/proxy \
+  -H "X-API-KEY: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}'
 
-- 健康：`GET /health` → `{status, service}`
-- 控制台（需 admin）：
-  - `GET /api/dashboard/status` → uptime、version、current_user
-  - `GET /api/dashboard/stats` → 请求统计、浏览器池、缓存
-  - `GET /api/dashboard/system` → CPU/内存/磁盘
-  - `GET /api/dashboard/time-series`
-  - `GET /api/dashboard/history?limit=20&user=xx`
-  - 日志：`GET /api/dashboard/logs?limit=200&user=xx` → `{all, user}`；SSE `/logs/stream?key=...&user=xx`
-  - 配置：`GET/PUT /api/dashboard/config`（运行时）  
-  - 缓存：`POST /api/dashboard/cache/clear` `{domain?}`  
-  - 浏览器池：`POST /api/dashboard/browser-pool/restart`
-  - 过盾：`POST /api/dashboard/test` `{url, mode?, force_refresh?}`；`POST /api/dashboard/test/batch` `{urls[], mode?}`
-  - 用户：`GET/POST/DELETE /api/dashboard/users`，`POST /api/dashboard/users/{u}/rotate`
+# 原始内容
+curl "http://localhost:8000/raw?url=https://example.com&key=your-key"
 
-- 代理/阅读：
-  - `POST /v1/proxy` (Header Key)  
-    体：`{url, method?, headers?, data?, json_body?, data_encoding?}`  
-    返回：`{status, url, headers, cookies, encoding, text}`
-  - `GET /raw?url=...&key=...` → 原始二进制
-  - `GET /reader?url=...&key=...` → 阅读 HTML
-  - `POST /reader?url=...&key=...` → form/raw 转发再返回 HTML
+# 阅读模式
+curl "http://localhost:8000/reader?url=https://example.com&key=your-key"
+```
 
-更多示例与字段详解见 `docs/WIKI.md`。
+### 规则系统
 
-## 🛡️ 运行机制
-- 浏览器池：最小/最大实例、空闲回收、内存阈值重启；看门狗按 `WATCHDOG_INTERVAL` 轮询。
-- 缓存：SQLite (`data/cache.db`)，过期 `COOKIE_EXPIRE_SECONDS`。
-- 日志：`logs/server.log`（带 `[user:xxx]`），SSE/轮询二选一。
+```bash
+# 创建规则
+curl -X POST http://localhost:8000/v1/rules \
+  -H "X-API-KEY: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "示例规则",
+    "target_url": "https://example.com/search?q={keyword}",
+    "mode": "cookie",
+    "selectors": {"title": "h1", "content": ".article"}
+  }'
 
-## 🧰 关键配置（config.py）
-- `API_KEYS_JSON` / `API_KEYS_FILE` / `API_KEY`（回退）  
-- `PORT`、`HEADLESS`、`BROWSER_POOL_MIN/MAX/IDLE_TIMEOUT`  
-- `MEMORY_LIMIT_MB`、`WATCHDOG_INTERVAL`、`FINGERPRINT_ENABLED`
+# 执行规则 (Permlink)
+curl "http://localhost:8000/v1/run/rule_id?keyword=test&key=your-key"
+```
 
-## 📦 部署提示
-- 镜像已内置 Chrome；Linux 建议保留 `--no-sandbox`。
-- 生产请：移除 compose `version` 警告、持久化 `data/`、调整内存限制 (>=2G)。
-- 健康检查：`healthcheck.py` 已集成。
+### 健康检查
 
-## 🐛 常见问题
-- 登录 403：确认使用 admin key；env/file 存在时默认 `API_KEY` 不再生效。
-- 日志空白：强刷；检查代理对 SSE 的限制，必要时查看 `logs/server.log`。
-- 过盾超时：前端已 60s 超时，仍超时可暂停自动刷新/提升浏览器池规模。
-- Chrome 启动失败：核查宿主机权限/内核，必要时复用 `--no-sandbox`。
-- 缓存异常：用 `/api/dashboard/cache/clear`；损坏时备份/删除 `data/cache.db`。
+```bash
+# 基础检查
+curl http://localhost:8000/health
 
-## 📚 Wiki
-- 详尽接口样例、错误排查、Nginx 反代、SSE 配置等见：`docs/WIKI.md`
+# 就绪检查（含组件状态）
+curl http://localhost:8000/health/ready
 
-## 🤝 贡献
-- 保持接口签名与行为不变；中文注释关键逻辑；避免引入长耗时任务。
-- 欢迎 Issue/PR，附场景、复现与期望。
+# 存活检查（Kubernetes Liveness）
+curl http://localhost:8000/health/live
+```
+
+---
+
+## 项目结构
+
+```
+cf-gateway/
+├── main.py                 # FastAPI 入口，看门狗任务
+├── config.py               # 配置管理
+│
+├── routers/                # API 路由
+│   ├── dashboard.py        # 管理面板 API
+│   ├── health.py           # 健康检查
+│   ├── proxy.py            # JSON 代理
+│   ├── raw.py              # 原始内容
+│   ├── reader.py           # 阅读模式
+│   └── runner.py           # 规则执行
+│
+├── services/               # 业务服务
+│   ├── proxy_service.py    # 代理调度层
+│   ├── cache_service.py    # 凭证缓存（SQLite/Redis）
+│   ├── domain_intelligence.py  # 域名智能学习
+│   ├── rule_service.py     # 规则管理
+│   └── api_key_store.py    # 密钥管理
+│
+├── core/                   # 核心组件
+│   ├── browser_pool.py     # 浏览器池
+│   ├── solver.py           # 过盾逻辑
+│   └── fetchers/           # 请求器（Cookie/Browser）
+│
+├── static/                 # 前端资源
+│   ├── index.html          # Vue 单页应用
+│   └── js/                 # JavaScript 模块
+│
+├── data/                   # 持久化数据
+│   ├── api_keys.json       # API 密钥
+│   ├── config.json         # 运行时配置
+│   └── proxies.txt         # 代理列表
+│
+└── docker-compose.yml      # Docker 部署配置
+```
+
+---
+
+## 配置说明
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PORT` | 8000 | 服务端口 |
+| `REDIS_URL` | redis://localhost:6379 | Redis 连接 |
+| `COOKIE_EXPIRE_SECONDS` | 1800 | Cookie 过期时间（秒） |
+| `BROWSER_POOL_MIN` | 1 | 浏览器池最小实例 |
+| `BROWSER_POOL_MAX` | 3 | 浏览器池最大实例 |
+| `MEMORY_LIMIT_MB` | 1500 | 内存限制（MB） |
+| `WATCHDOG_INTERVAL` | 300 | 看门狗检查间隔（秒） |
+
+### 运行时配置
+
+通过 Dashboard 或 API 可在线调整：
+
+```bash
+curl -X PUT http://localhost:8000/api/dashboard/config \
+  -H "X-API-KEY: admin-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cookie_expire_seconds": 3600,
+    "browser_pool_max": 5
+  }'
+```
+
+---
+
+## 智能特性
+
+### 域名智能学习
+
+系统自动跟踪各域名的访问成功率：
+
+- **Cookie 模式失败率 > 50%** → 自动切换到 Browser 模式
+- **统计数据 24 小时过期** → 定期重新评估
+- **Dashboard 可视化** → 查看各域名推荐策略
+
+```bash
+# 查看域名智能统计
+curl http://localhost:8000/api/dashboard/domain-intelligence \
+  -H "X-API-KEY: admin-key"
+```
+
+### Cookie 自动刷新
+
+后台看门狗自动维护凭证新鲜度：
+
+- 检测即将过期（5分钟内）的凭证
+- 自动提前刷新，避免请求失败
+- 每轮最多刷新 3 个域名
+
+---
+
+## 部署建议
+
+### 生产环境
+
+```yaml
+# docker-compose.yml 建议配置
+services:
+  cf-gateway:
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    environment:
+      - BROWSER_POOL_MAX=5
+      - MEMORY_LIMIT_MB=3000
+```
+
+### Kubernetes
+
+```yaml
+# 健康检查配置
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+```
+
+---
+
+## 常见问题
+
+<details>
+<summary><b>登录 Dashboard 返回 403</b></summary>
+
+确认使用 admin 角色的 API Key。当 `data/api_keys.json` 或 `API_KEYS_JSON` 环境变量存在时，`config.py` 中的默认 `API_KEY` 不再生效。
+
+</details>
+
+<details>
+<summary><b>过盾超时</b></summary>
+
+1. 增大浏览器池：`BROWSER_POOL_MAX=5`
+2. 检查目标站点是否可访问
+3. 查看日志：`docker logs cf-gateway`
+
+</details>
+
+<details>
+<summary><b>Chrome 启动失败</b></summary>
+
+确保 Docker 容器有足够权限，`--no-sandbox` 参数已默认启用。如使用非 Docker 环境，需手动安装 Chrome。
+
+</details>
+
+<details>
+<summary><b>内存占用过高</b></summary>
+
+1. 降低 `BROWSER_POOL_MAX`
+2. 调整 `MEMORY_LIMIT_MB` 触发自动重启
+3. 减少 `BROWSER_POOL_IDLE_TIMEOUT`
+
+</details>
+
+---
+
+## 更多资源
+
+- **详细文档**: [docs/WIKI.md](docs/WIKI.md)
+- **API 文档**: 启动后访问 `/docs` 或 `/redoc`
+- **问题反馈**: 提交 Issue 并附带日志和复现步骤
+
+---
+
+<div align="center">
+
+**CF-Gateway Pro** - 让 Cloudflare 不再是障碍
+
+</div>

@@ -113,6 +113,8 @@ def proxy_request(
     data_encoding: Optional[str] = None,
     auto_fallback: bool = True,
     proxy: Optional[str] = None,
+    body_type: Optional[str] = None,
+    wait_for: Optional[str] = None,
 ) -> Union[FetchResponse, Any]:
     """代理请求核心接口
 
@@ -126,6 +128,9 @@ def proxy_request(
                  默认根据域名规则自动选择
         data_encoding: POST data 编码，如 "gbk"、"gb2312"，默认自动检测
         auto_fallback: CookieFetcher 失败后是否自动降级到 BrowserFetcher
+        proxy: 代理地址
+        body_type: 请求体类型 ("form" / "json" / "raw")，用于设置 Content-Type
+        wait_for: 浏览器模式下等待指定元素出现
 
     Returns:
         FetchResponse: 响应对象
@@ -171,6 +176,8 @@ def proxy_request(
             json=json,
             data_encoding=data_encoding,
             proxy=proxy,
+            body_type=body_type,
+            wait_for=wait_for,
         )
 
         # 检查是否被拦截（即使返回了响应）

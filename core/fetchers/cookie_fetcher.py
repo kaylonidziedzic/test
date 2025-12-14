@@ -68,6 +68,7 @@ class CookieFetcher(BaseFetcher):
         json: Optional[Dict[str, Any]] = None,
         data_encoding: Optional[str] = None,
         proxy: Optional[str] = None,
+        body_type: Optional[str] = None,
         **kwargs
     ) -> FetchResponse:
         """使用 Cookie 复用方式获取页面"""
@@ -77,15 +78,24 @@ class CookieFetcher(BaseFetcher):
             force_refresh = attempt > 0
 
             # 1. 获取凭证 (Cookie + UA)
-            creds = credential_cache.get_credentials(url, force_refresh=force_refresh)
+            # 将代理参数传递给过盾流程
+            creds = credential_cache.get_credentials(url, force_refresh=force_refresh, proxy=proxy)
 
             # 2. 构造安全的请求头
-            safe_headers = self._build_safe_headers(headers, creds["ua"], url, method)
+            safe_headers = self._build_safe_headers(headers, creds["ua"], url, method, body_type)
 
-            # 3. 获取代理 (优先使用指定代理)
-            use_proxy = proxy or proxy_manager.get_proxy()
-            if use_proxy:
-                log.info(f"[{self.name}] 使用代理: {use_proxy}")
+            # 3. 获取代理 (只有明确指定时才使用)
+            # proxy=None 表示不使用代理，proxy="pool" 表示从代理池获取
+            use_proxy = None
+            if proxy == "pool":
+                use_proxy = proxy_manager.get_proxy()
+                if use_proxy:
+                    log.info(f"[{self.name}] 使用代理池: {use_proxy}")
+                else:
+                    log.warning(f"[{self.name}] 代理池为空，使用直连")
+            elif proxy:
+                use_proxy = proxy
+                log.info(f"[{self.name}] 使用指定代理: {use_proxy}")
             else:
                 log.info(f"[{self.name}] 不使用代理 (直连)")
 
@@ -123,9 +133,17 @@ class CookieFetcher(BaseFetcher):
         raise Exception("Unexpected error in CookieFetcher")
 
     def _build_safe_headers(
-        self, headers: Dict[str, str], ua: str, url: str, method: str
+        self, headers: Dict[str, str], ua: str, url: str, method: str, body_type: Optional[str] = None
     ) -> Dict[str, str]:
-        """构造安全的请求头，过滤可能冲突的字段"""
+        """构造安全的请求头，过滤可能冲突的字段
+
+        Args:
+            headers: 用户自定义请求头
+            ua: User-Agent
+            url: 请求 URL
+            method: HTTP 方法
+            body_type: 请求体类型 ("form" / "json" / "raw")
+        """
         blocked_headers = {
             "host",
             "content-length",
@@ -153,6 +171,18 @@ class CookieFetcher(BaseFetcher):
             # 添加 Accept
             if "accept" not in {k.lower() for k in safe.keys()}:
                 safe["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+
+            # 根据 body_type 设置 Content-Type
+            if "content-type" not in {k.lower() for k in safe.keys()}:
+                if body_type == "json":
+                    safe["Content-Type"] = "application/json"
+                elif body_type == "form":
+                    safe["Content-Type"] = "application/x-www-form-urlencoded"
+                elif body_type == "raw":
+                    safe["Content-Type"] = "text/plain"
+                else:
+                    # 默认使用 form-urlencoded（兼容旧行为）
+                    safe["Content-Type"] = "application/x-www-form-urlencoded"
 
         return safe
 
@@ -185,6 +215,7 @@ class CookieFetcher(BaseFetcher):
                 encoded_str = urlencode(flat_dict, encoding=data_encoding)
                 request_data = encoded_str
                 log.info(f"[{self.name}] 使用 {data_encoding} 编码 POST 数据 (str -> re-encode)")
+                log.info(f"[{self.name}] 原始 data: {data}, 解析后: {flat_dict}, 编码后: {encoded_str}")
 
         request_kwargs = {
             "method": method,

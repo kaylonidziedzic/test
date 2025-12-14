@@ -53,20 +53,26 @@ class BrowserFetcher(BaseFetcher):
         headers: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
         json: Optional[Dict[str, Any]] = None,
+        proxy: str = None,
+        wait_for: Optional[str] = None,
         **kwargs
     ) -> FetchResponse:
         """使用浏览器直接获取页面
 
         注意: 此方法忽略 method, headers, data, json 参数，
         因为浏览器只能模拟 GET 请求。
+
+        Args:
+            proxy: 代理地址，None 表示不使用代理，"pool" 表示从代理池获取
+            wait_for: 等待指定的 CSS 选择器元素出现后再采集
         """
         if method.upper() != "GET":
             log.warning(f"[{self.name}] 浏览器直读仅支持 GET 请求，忽略 method={method}")
 
         log.info(f"[{self.name}] 使用浏览器直接获取: {url}")
 
-        # 从浏览器池获取实例
-        instance = browser_pool.acquire(timeout=60)
+        # 从浏览器池获取实例，传递代理参数
+        instance = browser_pool.acquire(timeout=60, proxy=proxy)
         if not instance:
             raise Exception("无法获取浏览器实例，池已满")
 
@@ -99,7 +105,17 @@ class BrowserFetcher(BaseFetcher):
                 # 检查是否过盾成功
                 if "just a moment" not in title and "cloudflare" not in title:
                     log.success(f"[{self.name}] 页面加载成功，标题: {title}")
-                    time.sleep(1)  # 等待页面完全渲染
+
+                    # 如果指定了 wait_for，等待元素出现
+                    if wait_for:
+                        log.info(f"[{self.name}] 等待元素: {wait_for}")
+                        try:
+                            page.ele(wait_for, timeout=10)
+                            log.success(f"[{self.name}] 元素已出现: {wait_for}")
+                        except Exception as e:
+                            log.warning(f"[{self.name}] 等待元素超时: {wait_for}, 继续采集")
+                    else:
+                        time.sleep(1)  # 等待页面完全渲染
                     break
 
                 time.sleep(1)

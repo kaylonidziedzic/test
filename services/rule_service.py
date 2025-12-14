@@ -17,13 +17,13 @@ class ScrapeConfig(BaseModel):
     name: str = "未命名规则"
     target_url: str
     method: str = "GET"
-    selectors: Dict[str, str] = Field(default_factory=dict, description="CSS选择器映射")
+    selectors: Optional[Dict[str, str]] = Field(default_factory=dict, description="CSS选择器映射")
     mode: str = "cookie"  # cookie 或 browser
     wait_for: Optional[str] = None  # 仅 browser 模式有效
     created_at: float = Field(default_factory=time.time)
     # 接口与格式
     api_type: str = "proxy"  # proxy / raw / reader
-    headers: Dict[str, str] = Field(default_factory=dict, description="自定义请求头")
+    headers: Optional[Dict[str, str]] = Field(default_factory=dict, description="自定义请求头")
     body: Optional[str] = None  # POST 请求体
     body_type: str = "none"  # none / json / form / raw
     # 访问控制

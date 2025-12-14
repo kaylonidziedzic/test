@@ -1,0 +1,9 @@
+{
+  "cookie_expire_seconds": 1800,
+  "memory_limit_mb": 1500,
+  "watchdog_interval": 300,
+  "fingerprint_enabled": true,
+  "browser_pool_min": 1,
+  "browser_pool_max": 3,
+  "browser_pool_idle_timeout": 300
+}

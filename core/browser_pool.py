@@ -78,8 +78,12 @@ class BrowserPool:
         self._lock = threading.Lock()
         self._initialized = False
 
-    def _create_browser(self) -> BrowserInstance:
-        """创建新的浏览器实例"""
+    def _create_browser(self, proxy: str = None) -> BrowserInstance:
+        """创建新的浏览器实例
+
+        Args:
+            proxy: 代理地址，None 表示不使用代理，"pool" 表示从代理池获取，其他值为指定代理
+        """
         log.info("[BrowserPool] 创建新浏览器实例...")
 
         co = ChromiumOptions()
@@ -89,11 +93,22 @@ class BrowserPool:
         for arg in settings.BROWSER_ARGS:
             co.set_argument(arg)
 
-        # 注入代理
-        proxy = proxy_manager.get_proxy()
-        if proxy:
-            log.info(f"[BrowserPool] 为新实例分配代理: {proxy}")
-            co.set_argument(f"--proxy-server={proxy}")
+        # 根据参数决定是否使用代理
+        actual_proxy = None
+        if proxy == "pool":
+            actual_proxy = proxy_manager.get_proxy()
+            if actual_proxy:
+                log.info(f"[BrowserPool] 从代理池分配代理: {actual_proxy}")
+            else:
+                log.warning("[BrowserPool] 代理池为空，使用直连")
+        elif proxy:
+            actual_proxy = proxy
+            log.info(f"[BrowserPool] 使用指定代理: {actual_proxy}")
+        else:
+            log.info("[BrowserPool] 不使用代理 (直连)")
+
+        if actual_proxy:
+            co.set_argument(f"--proxy-server={actual_proxy}")
 
         co.headless(settings.HEADLESS)
 
@@ -141,19 +156,40 @@ class BrowserPool:
             self._initialized = True
             log.info(f"[BrowserPool] 初始化完成, 当前数量: {len(self._all_instances)}")
 
-    def acquire(self, timeout: float = 30.0) -> Optional[BrowserInstance]:
+    def acquire(self, timeout: float = 30.0, proxy: str = None) -> Optional[BrowserInstance]:
         """获取一个浏览器实例
 
         Args:
             timeout: 等待超时时间 (秒)
+            proxy: 代理地址，None 表示不使用代理，"pool" 表示从代理池获取
 
         Returns:
             BrowserInstance 或 None (超时)
+
+        注意: 由于浏览器代理是启动参数，每次请求都会创建新的浏览器实例。
+        池中的实例仅用于无代理请求的复用。
         """
         self._init_pool()
 
+        # 如果指定了代理，直接创建新实例（因为代理是启动参数）
+        if proxy:
+            log.info(f"[BrowserPool] 请求使用代理，创建专用实例")
+            with self._lock:
+                if len(self._all_instances) < self.max_size:
+                    try:
+                        instance = self._create_browser(proxy=proxy)
+                        self._all_instances.append(instance)
+                        instance.mark_used()
+                        return instance
+                    except Exception as e:
+                        log.error(f"[BrowserPool] 创建代理浏览器失败: {e}")
+                        return None
+                else:
+                    log.warning("[BrowserPool] 池已满，无法创建代理浏览器")
+                    return None
+
+        # 无代理请求，尝试从池中获取
         try:
-            # 尝试从池中获取
             instance = self._pool.get(timeout=timeout)
 
             # 检查浏览器是否还活着
@@ -161,7 +197,7 @@ class BrowserPool:
                 log.warning(f"[BrowserPool] 浏览器已崩溃, 创建新实例")
                 with self._lock:
                     self._all_instances.remove(instance)
-                instance = self._create_browser()
+                instance = self._create_browser(proxy=None)
                 with self._lock:
                     self._all_instances.append(instance)
 
@@ -174,7 +210,7 @@ class BrowserPool:
             with self._lock:
                 if len(self._all_instances) < self.max_size:
                     try:
-                        instance = self._create_browser()
+                        instance = self._create_browser(proxy=None)
                         self._all_instances.append(instance)
                         instance.mark_used()
                         return instance

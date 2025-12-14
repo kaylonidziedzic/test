@@ -1,0 +1,139 @@
+/* CF-Gateway Dashboard Styles */
+
+/* Vue cloak - 防止闪烁 */
+[v-cloak] {
+    display: none !important;
+}
+
+/* Loader 动画 */
+.loader {
+    border: 2px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 日志样式 */
+.log-line {
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+    word-break: break-all;
+}
+
+.log-info {
+    color: #3b82f6;
+}
+
+.log-warning {
+    color: #f59e0b;
+    background-color: #fef3c7;
+}
+
+.log-error {
+    color: #ef4444;
+    background-color: #fee2e2;
+}
+
+.log-success {
+    color: #10b981;
+    background-color: #d1fae5;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* 表格行悬停效果 */
+tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+/* 输入框聚焦效果 */
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* 按钮过渡效果 */
+button {
+    transition: all 0.15s ease;
+}
+
+/* 卡片悬停效果 */
+.hover\:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 图表容器 */
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Toast 动画 */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.fixed.bottom-6.right-6 > div {
+    animation: slideIn 0.3s ease;
+}
+
+/* 移动端适配 */
+@media (max-width: 1024px) {
+    main {
+        padding-bottom: 5rem !important;
+    }
+}
+
+/* 代码块样式 */
+code {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* 脉冲动画 */
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}

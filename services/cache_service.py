@@ -28,7 +28,8 @@ class BaseCache(ABC):
         self.expire_seconds = expire_seconds
 
     @abstractmethod
-    def get_credentials(self, url: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_credentials(self, url: str, force_refresh: bool = False, proxy: str = None) -> Dict[str, Any]:
+        """获取凭证，proxy 参数会传递给过盾流程"""
         pass
 
     @abstractmethod
@@ -87,7 +88,7 @@ class SQLiteCache(BaseCache):
     def _get_conn(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
 
-    def get_credentials(self, url: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_credentials(self, url: str, force_refresh: bool = False, proxy: str = None) -> Dict[str, Any]:
         domain = self._extract_domain(url)
         now = time.time()
 
@@ -108,7 +109,7 @@ class SQLiteCache(BaseCache):
 
         # 缓存无效，需要重新过盾
         log.info(f"[Cache:SQLite] 启动过盾流程: {domain}")
-        creds = solve_turnstile(url)
+        creds = solve_turnstile(url, proxy=proxy)
 
         with self._lock:
             conn = self._get_conn()
@@ -205,7 +206,7 @@ class RedisCache(BaseCache):
     def _get_key(self, domain: str) -> str:
         return f"{self.prefix}{domain}"
 
-    def get_credentials(self, url: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_credentials(self, url: str, force_refresh: bool = False, proxy: str = None) -> Dict[str, Any]:
         domain = self._extract_domain(url)
         key = self._get_key(domain)
 
@@ -220,7 +221,7 @@ class RedisCache(BaseCache):
 
         # 缓存无效，过盾
         log.info(f"[Cache:Redis] 启动过盾流程: {domain}")
-        creds = solve_turnstile(url)
+        creds = solve_turnstile(url, proxy=proxy)
 
         # 写入 Redis
         try:

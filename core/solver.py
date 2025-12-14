@@ -7,13 +7,17 @@ from utils.logger import log
 SOLVE_TIMEOUT = getattr(settings, 'SOLVE_TIMEOUT', 30)
 
 
-def solve_turnstile(url: str):
+def solve_turnstile(url: str, proxy: str = None):
     """
     核心过盾逻辑
     返回: {"cookies": dict, "ua": str}
+
+    Args:
+        url: 目标 URL
+        proxy: 代理地址，None 表示不使用代理，"pool" 表示从代理池获取
     """
-    # 从浏览器池获取实例
-    instance = browser_pool.acquire(timeout=60)
+    # 从浏览器池获取实例，传递代理参数
+    instance = browser_pool.acquire(timeout=60, proxy=proxy)
     if not instance:
         raise Exception("无法获取浏览器实例，池已满")
 

@@ -397,7 +397,7 @@ def test_bypass(req: TestRequest, request: Request) -> Dict[str, Any]:
             domain = urlparse(req.url).netloc
             credential_cache.invalidate(domain)
 
-        # 构建临时配置
+        # 构建临时配置（None 转为空字典）
         config = ScrapeConfig(
             name="QuickTest",
             target_url=req.url,
@@ -407,11 +407,11 @@ def test_bypass(req: TestRequest, request: Request) -> Dict[str, Any]:
             proxy=req.proxy,
             body=req.body,
             body_type=req.body_type,
-            headers=req.headers,
-            selectors=req.selectors,
+            headers=req.headers or {},
+            selectors=req.selectors or {},
             wait_for=req.wait_for,
             # 默认值
-            method="GET" if not req.body or req.body_type == "none" else "POST", 
+            method="GET" if not req.body or req.body_type == "none" else "POST",
             is_public=False
         )
         

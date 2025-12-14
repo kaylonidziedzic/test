@@ -207,6 +207,46 @@ CookieFetcher 被拦截后重试，即使重新过盾获取新 Cookie，仍可�
 
 ---
 
+## 2024-12-14 代理模式优化 (已完成)
+
+### 问题描述
+使用代理时，CookieFetcher 因 TLS 指纹不一致必定失败，导致每次请求都要经历：
+1. CookieFetcher 过盾（5-10秒）
+2. CookieFetcher 请求失败（2-3秒）
+3. 降级到 BrowserFetcher（3-5秒）
+
+总计约 10-18 秒，严重影响速度。
+
+### 根本原因
+- 浏览器通过代理过盾获取的 `cf_clearance` Cookie 与该代理 IP + TLS 指纹绑定
+- CookieFetcher 使用 curl_cffi 发请求，即使用相同代理，**TLS 指纹不同**
+- Cloudflare 检测到不一致，返回 403
+
+### 优化方案
+**方案 C：根据是否使用代理选择 Fetcher**
+
+1. **使用代理时**：直接使用 BrowserFetcher，跳过 CookieFetcher
+2. **不使用代理时**：先尝试 CookieFetcher（Cookie 复用），失败再降级
+
+### 修改文件
+- `services/proxy_service.py`：在 Fetcher 选择逻辑中，检测到 proxy 时直接使用 BrowserFetcher
+- `core/fetchers/cookie_fetcher.py`：移除清除缓存逻辑（不再需要）
+
+### 优化后流程
+```
+使用代理：
+检测到 proxy → 直接使用 BrowserFetcher → 约 3-5 秒
+
+不使用代理：
+CookieFetcher（Cookie 复用）→ 成功 → 约 0.5-2 秒
+CookieFetcher → 被拦截 → 降级到 BrowserFetcher → 约 3-5 秒
+```
+
+### 前端说明
+当规则配置使用代理（proxy_mode=pool 或 fixed）时，系统会自动使用浏览器直出模式，不会尝试 Cookie 复用。这是因为代理模式下 Cookie 复用存在 TLS 指纹不一致的问题，暂时无法解决。
+
+---
+
 ## 当前状态
 
 - [x] 前端问题已修复
@@ -214,5 +254,6 @@ CookieFetcher 被拦截后重试，即使重新过盾获取新 Cookie，仍可�
 - [x] Cookie 复用（无代理）正常工作
 - [x] Cookie 复用失败时自动降级到浏览器直出
 - [x] **BrowserFetcher POST 请求支持** (2024-12-14)
-- [x] **Cookie 重试失败后清理机制** (2024-12-14)
-- [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 IP 一致性
+- [x] ~~Cookie 重试失败后清理机制~~ (已移除，改为直接降级)
+- [x] **代理模式优化：直接使用 BrowserFetcher** (2024-12-14)
+- [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 TLS 指纹一致性（长期目标）

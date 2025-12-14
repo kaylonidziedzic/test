@@ -116,8 +116,9 @@ class CookieFetcher(BaseFetcher):
 
                 # 5. 检查是否被拦截，被拦截直接返回（由上层降级处理）
                 if self._is_blocked(resp):
-                    log.warning(f"[{self.name}] 被拦截，清除缓存并返回（等待降级）")
-                    self._cleanup_on_persistent_block(url)
+                    log.warning(f"[{self.name}] 被拦截，返回响应（等待降级）")
+                    # 注意：不清除缓存，因为无代理模式下 Cookie 可能仍然有效
+                    # 清除缓存的逻辑已移除，降级后由 BrowserFetcher 处理
 
                 return resp
 
@@ -244,62 +245,6 @@ class CookieFetcher(BaseFetcher):
             url=str(resp.url),
             encoding=resp.encoding or "utf-8",
         )
-
-    def _cleanup_on_persistent_block(self, url: str):
-        """重试后仍被拦截时，清除缓存并销毁浏览器实例
-
-        这样下次请求会用全新的浏览器环境重新过盾
-        """
-        from urllib.parse import urlparse
-        from core.browser_pool import browser_pool
-
-        domain = urlparse(url).netloc
-
-        # 1. 清除该域名的凭证缓存
-        try:
-            credential_cache.invalidate(domain)
-            log.info(f"[{self.name}] 已清除域名缓存: {domain}")
-        except Exception as e:
-            log.warning(f"[{self.name}] 清除缓存失败: {e}")
-
-        # 2. 销毁所有空闲的浏览器实例，让下次请求用全新浏览器
-        try:
-            # 先收集所有空闲实例，再统一销毁（避免 destroy 自动补充导致无限循环）
-            instances_to_destroy = []
-            while True:
-                try:
-                    instance = browser_pool._pool.get_nowait()
-                    instances_to_destroy.append(instance)
-                except Exception:
-                    break
-
-            # 销毁收集到的实例（不触发自动补充，因为我们会一次性销毁多个）
-            for instance in instances_to_destroy:
-                try:
-                    instance.page.quit()
-                except Exception:
-                    pass
-                with browser_pool._lock:
-                    try:
-                        browser_pool._all_instances.remove(instance)
-                    except ValueError:
-                        pass
-
-            if instances_to_destroy:
-                log.info(f"[{self.name}] 已销毁 {len(instances_to_destroy)} 个浏览器实例")
-
-            # 最后补充一个新实例到池中
-            with browser_pool._lock:
-                if len(browser_pool._all_instances) < browser_pool.min_size:
-                    try:
-                        new_instance = browser_pool._create_browser()
-                        browser_pool._all_instances.append(new_instance)
-                        browser_pool._pool.put(new_instance)
-                        log.info(f"[{self.name}] 已创建新浏览器实例补充池")
-                    except Exception as e:
-                        log.warning(f"[{self.name}] 创建补充实例失败: {e}")
-        except Exception as e:
-            log.warning(f"[{self.name}] 销毁浏览器实例失败: {e}")
 
     def _is_blocked(self, resp: FetchResponse) -> bool:
         """检查响应是否被 Cloudflare 或其他反爬机制拦截"""

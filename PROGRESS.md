@@ -171,7 +171,39 @@ IP 一致，Cookie 有效
 
 BrowserFetcher POST 修复是一个**兜底方案**，确保即使 Cookie 失效且重试也失败时，降级到浏览器仍能正确处理 POST 请求。
 
-**待解决问题**：Cookie 失效后，CookieFetcher 重试时重新过盾，但新 Cookie 仍可能被拦截（原因待查）。
+**待解决问题**：~~Cookie 失效后，CookieFetcher 重试时重新过盾，但新 Cookie 仍可能被拦截（原因待查）。~~ 已解决，见下方。
+
+---
+
+## 2024-12-14 Cookie 重试失败后清理机制 (已修复)
+
+### 问题描述
+CookieFetcher 被拦截后重试，即使重新过盾获取新 Cookie，仍可能被拦截。
+
+### 根本原因
+1. 重新过盾时复用了**同一个浏览器实例**
+2. 该浏览器实例的状态/指纹可能已被 Cloudflare 标记
+3. 新 Cookie 虽然有效，但与被标记的浏览器环境关联，仍被拦截
+
+### 修复方案
+在 `cookie_fetcher.py` 中添加 `_cleanup_on_persistent_block()` 方法：
+
+1. **清除域名缓存**：调用 `credential_cache.invalidate(domain)` 删除该域名的凭证
+2. **销毁浏览器实例**：从浏览器池中取出所有空闲实例并销毁
+3. **自动补充**：`browser_pool.destroy()` 会自动创建新实例补充到最小数量
+
+### 流程变化
+```
+之前：
+请求 → 被拦截 → 重新过盾(复用旧浏览器) → 仍被拦截 → 降级到 BrowserFetcher
+
+现在：
+请求 → 被拦截 → 重新过盾(复用旧浏览器) → 仍被拦截 → 清除缓存+销毁浏览器 → 降级到 BrowserFetcher
+下次请求 → 用全新浏览器过盾 → 成功
+```
+
+### 修改文件
+- `core/fetchers/cookie_fetcher.py`：添加 `_cleanup_on_persistent_block()` 方法
 
 ---
 
@@ -182,4 +214,5 @@ BrowserFetcher POST 修复是一个**兜底方案**，确保即使 Cookie 失效
 - [x] Cookie 复用（无代理）正常工作
 - [x] Cookie 复用失败时自动降级到浏览器直出
 - [x] **BrowserFetcher POST 请求支持** (2024-12-14)
+- [x] **Cookie 重试失败后清理机制** (2024-12-14)
 - [ ] **待优化**: 代理模式下 Cookie 复用需要架构改进确保 IP 一致性

@@ -120,7 +120,9 @@ class CookieFetcher(BaseFetcher):
                         log.warning(f"[{self.name}] 被拦截，刷新缓存重试...")
                         continue
                     else:
-                        log.error(f"[{self.name}] 重试后仍被拦截")
+                        # 重试后仍被拦截，清除缓存并销毁浏览器实例
+                        log.error(f"[{self.name}] 重试后仍被拦截，清除缓存并重置浏览器池")
+                        self._cleanup_on_persistent_block(url)
 
                 return resp
 
@@ -247,6 +249,40 @@ class CookieFetcher(BaseFetcher):
             url=str(resp.url),
             encoding=resp.encoding or "utf-8",
         )
+
+    def _cleanup_on_persistent_block(self, url: str):
+        """重试后仍被拦截时，清除缓存并销毁浏览器实例
+
+        这样下次请求会用全新的浏览器环境重新过盾
+        """
+        from urllib.parse import urlparse
+        from core.browser_pool import browser_pool
+
+        domain = urlparse(url).netloc
+
+        # 1. 清除该域名的凭证缓存
+        try:
+            credential_cache.invalidate(domain)
+            log.info(f"[{self.name}] 已清除域名缓存: {domain}")
+        except Exception as e:
+            log.warning(f"[{self.name}] 清除缓存失败: {e}")
+
+        # 2. 销毁所有空闲的浏览器实例，让下次请求用全新浏览器
+        try:
+            # 获取池中所有空闲实例并销毁
+            destroyed = 0
+            while True:
+                try:
+                    # 尝试获取空闲实例（非阻塞）
+                    instance = browser_pool._pool.get_nowait()
+                    browser_pool.destroy(instance)
+                    destroyed += 1
+                except Exception:
+                    break
+            if destroyed > 0:
+                log.info(f"[{self.name}] 已销毁 {destroyed} 个浏览器实例")
+        except Exception as e:
+            log.warning(f"[{self.name}] 销毁浏览器实例失败: {e}")
 
     def _is_blocked(self, resp: FetchResponse) -> bool:
         """检查响应是否被 Cloudflare 或其他反爬机制拦截"""

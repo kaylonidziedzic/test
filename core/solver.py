@@ -131,5 +131,10 @@ def solve_turnstile(url: str, proxy: str = None):
             log.warning(f"[solver] 浏览器实例已损坏，销毁 PID: {instance.pid}")
             browser_pool.destroy(instance)
         else:
+            # 归还前清理页面状态，避免复用时出现问题
+            try:
+                page.get("about:blank")
+            except Exception:
+                pass
             # 正常归还到池中
             browser_pool.release(instance)

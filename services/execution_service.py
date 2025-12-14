@@ -187,15 +187,25 @@ def execute_rule_raw(rule: ScrapeConfig, test_mode: bool = False):
 
         # 测试模式返回 JSON 摘要
         if test_mode:
+            # 尝试获取文本预览，使用智能解码
+            preview = ""
+            try:
+                text = decode_response(resp.content, getattr(resp, "apparent_encoding", None))
+                preview = text[:500] + ("..." if len(text) > 500 else "")
+            except Exception:
+                preview = "(二进制内容，无法预览)"
+
             return {
                 "success": True,
+                "data": {"内容预览": preview},
                 "meta": {
                     "rule_id": rule.id,
                     "name": rule.name,
                     "status": resp.status_code,
                     "content_type": content_type,
                     "content_length": len(resp.content),
-                }
+                },
+                "raw_length": len(resp.content),
             }
 
         return Response(
@@ -236,16 +246,28 @@ def execute_rule_reader(rule: ScrapeConfig, test_mode: bool = False):
 
         # 测试模式返回 JSON 摘要
         if test_mode:
-            text = resp.text if hasattr(resp, 'text') else ''
+            # 使用智能解码，确保中文等非 UTF-8 编码正确显示
+            text = decode_response(resp.content, getattr(resp, "apparent_encoding", None))
+            title = _extract_title(text)
+
+            # 提取正文文本预览（去除 HTML 标签）
+            import re
+            text_content = re.sub(r'<[^>]+>', ' ', text)
+            text_content = ' '.join(text_content.split())[:500]
+
             return {
                 "success": True,
+                "data": {
+                    "页面标题": title or "(无标题)",
+                    "正文预览": text_content + ("..." if len(text_content) >= 500 else ""),
+                },
                 "meta": {
                     "rule_id": rule.id,
                     "name": rule.name,
                     "status": resp.status_code,
                     "content_length": len(text),
-                    "title": _extract_title(text),
-                }
+                },
+                "raw_length": len(text),
             }
 
         return make_html_response(resp, rule.target_url)

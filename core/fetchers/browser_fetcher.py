@@ -161,6 +161,7 @@ class BrowserFetcher(BaseFetcher):
             data: 表单数据（字符串 "key1=value1&key2=value2" 或 dict）
         """
         from urllib.parse import parse_qs, urlparse
+        import time
 
         # 解析表单数据
         form_data = {}
@@ -178,9 +179,31 @@ class BrowserFetcher(BaseFetcher):
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         page.get(base_url)
 
-        # 等待页面加载
-        import time
-        time.sleep(1)
+        # 等待页面加载并处理可能的 Cloudflare 验证
+        start_time = time.time()
+        while time.time() - start_time < self.timeout:
+            title = page.title.lower()
+
+            # 尝试点击 Cloudflare 验证码
+            try:
+                box = page.ele("@name=cf-turnstile-response", timeout=0.5)
+                if box:
+                    wrapper = box.parent()
+                    iframe = wrapper.shadow_root.ele("tag:iframe")
+                    cb = iframe.ele("tag:body").shadow_root.ele("tag:input")
+                    if cb:
+                        log.info(f"[{self.name}] [POST] 发现验证码，点击中...")
+                        cb.click()
+            except Exception:
+                pass
+
+            # 检查是否过盾成功
+            if "just a moment" not in title and "cloudflare" not in title:
+                log.info(f"[{self.name}] [POST] 基础页面加载成功，准备提交表单")
+                time.sleep(0.5)  # 短暂等待页面稳定
+                break
+
+            time.sleep(0.5)
 
         # 构建 JavaScript 代码创建并提交表单
         # 使用 JSON 传递数据避免转义问题

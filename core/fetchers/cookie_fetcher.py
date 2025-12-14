@@ -114,15 +114,10 @@ class CookieFetcher(BaseFetcher):
                     proxy=use_proxy,
                 )
 
-                # 5. 检查是否被拦截
+                # 5. 检查是否被拦截，被拦截直接返回（由上层降级处理）
                 if self._is_blocked(resp):
-                    if attempt < self.retries:
-                        log.warning(f"[{self.name}] 被拦截，刷新缓存重试...")
-                        continue
-                    else:
-                        # 重试后仍被拦截，清除缓存并销毁浏览器实例
-                        log.error(f"[{self.name}] 重试后仍被拦截，清除缓存并重置浏览器池")
-                        self._cleanup_on_persistent_block(url)
+                    log.warning(f"[{self.name}] 被拦截，清除缓存并返回（等待降级）")
+                    self._cleanup_on_persistent_block(url)
 
                 return resp
 
@@ -269,18 +264,40 @@ class CookieFetcher(BaseFetcher):
 
         # 2. 销毁所有空闲的浏览器实例，让下次请求用全新浏览器
         try:
-            # 获取池中所有空闲实例并销毁
-            destroyed = 0
+            # 先收集所有空闲实例，再统一销毁（避免 destroy 自动补充导致无限循环）
+            instances_to_destroy = []
             while True:
                 try:
-                    # 尝试获取空闲实例（非阻塞）
                     instance = browser_pool._pool.get_nowait()
-                    browser_pool.destroy(instance)
-                    destroyed += 1
+                    instances_to_destroy.append(instance)
                 except Exception:
                     break
-            if destroyed > 0:
-                log.info(f"[{self.name}] 已销毁 {destroyed} 个浏览器实例")
+
+            # 销毁收集到的实例（不触发自动补充，因为我们会一次性销毁多个）
+            for instance in instances_to_destroy:
+                try:
+                    instance.page.quit()
+                except Exception:
+                    pass
+                with browser_pool._lock:
+                    try:
+                        browser_pool._all_instances.remove(instance)
+                    except ValueError:
+                        pass
+
+            if instances_to_destroy:
+                log.info(f"[{self.name}] 已销毁 {len(instances_to_destroy)} 个浏览器实例")
+
+            # 最后补充一个新实例到池中
+            with browser_pool._lock:
+                if len(browser_pool._all_instances) < browser_pool.min_size:
+                    try:
+                        new_instance = browser_pool._create_browser()
+                        browser_pool._all_instances.append(new_instance)
+                        browser_pool._pool.put(new_instance)
+                        log.info(f"[{self.name}] 已创建新浏览器实例补充池")
+                    except Exception as e:
+                        log.warning(f"[{self.name}] 创建补充实例失败: {e}")
         except Exception as e:
             log.warning(f"[{self.name}] 销毁浏览器实例失败: {e}")
 

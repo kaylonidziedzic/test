@@ -41,8 +41,8 @@ from utils.logger import log
 # Fetcher 实例管理
 # ============================================================================
 
-# 默认 Fetcher 实例
-_default_fetcher = CookieFetcher(retries=1, timeout=30, impersonate=None)
+# 默认 Fetcher 实例（retries=0 表示失败直接降级，不重试）
+_default_fetcher = CookieFetcher(retries=0, timeout=30, impersonate=None)
 
 # 浏览器直读 Fetcher 实例
 _browser_fetcher = BrowserFetcher(timeout=20)
@@ -183,7 +183,7 @@ def proxy_request(
         # 检查是否被拦截（即使返回了响应）
         if use_fallback and _is_response_blocked(response):
             log.warning(f"[ProxyService] CookieFetcher 返回被拦截，降级到 BrowserFetcher")
-            return _fallback_to_browser(url, method, headers, data, json)
+            return _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
 
         return response
 
@@ -191,7 +191,7 @@ def proxy_request(
         # CookieFetcher 异常，尝试降级
         if use_fallback:
             log.warning(f"[ProxyService] CookieFetcher 异常: {e}，降级到 BrowserFetcher")
-            return _fallback_to_browser(url, method, headers, data, json)
+            return _fallback_to_browser(url, method, headers, data, json, proxy=proxy)
         raise
 
 
@@ -221,17 +221,20 @@ def _fallback_to_browser(
     headers: Optional[Dict[str, str]],
     data: Optional[Dict[str, Any]],
     json: Optional[Dict[str, Any]],
+    proxy: Optional[str] = None,
 ) -> FetchResponse:
     """降级到浏览器直读
 
     支持 GET 和 POST 请求。POST 请求通过 JavaScript 表单提交实现。
     """
-    log.info(f"[ProxyService] 降级使用 BrowserFetcher 处理请求: {url} (method={method})")
+    proxy_info = f", proxy={proxy}" if proxy else ""
+    log.info(f"[ProxyService] 降级使用 BrowserFetcher 处理请求: {url} (method={method}{proxy_info})")
     return _browser_fetcher.fetch(
         url=url,
         method=method,
         headers=headers or {},
         data=data,
+        proxy=proxy,
     )
 
 

@@ -311,7 +311,7 @@ const app = createApp({
                 state.ruleForm.mode = rule.mode || 'cookie';
                 state.ruleForm.api_type = rule.api_type || 'proxy';
                 state.ruleForm.is_public = rule.is_public || false;
-                state.ruleForm.proxy_mode = rule.proxy ? (rule.proxy === 'pool' ? 'pool' : 'fixed') : 'none';
+                state.ruleForm.proxy_mode = rule.proxy_mode || 'none';
                 state.ruleForm.proxy = rule.proxy || '';
                 state.ruleForm.wait_for = rule.wait_for || '';
                 state.ruleForm.cache_ttl = rule.cache_ttl || 0;

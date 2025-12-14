@@ -195,8 +195,9 @@ class ApiClient {
     }
 
     async removeProxy(address) {
-        return this.request(`/proxies/${encodeURIComponent(address)}`, {
-            method: 'DELETE'
+        return this.request('/proxies', {
+            method: 'DELETE',
+            body: JSON.stringify({ proxy: address })
         });
     }
 

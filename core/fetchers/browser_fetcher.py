@@ -88,19 +88,23 @@ class BrowserFetcher(BaseFetcher):
             # 2. 等待页面加载并处理 Cloudflare 验证
             import time
             start_time = time.time()
+            click_count = 0
+            last_click_time = 0
             while time.time() - start_time < self.timeout:
                 title = page.title.lower()
 
-                # 尝试点击 Cloudflare 验证码
+                # 尝试点击 Cloudflare 验证码（避免频繁点击，间隔至少1.5秒）
                 try:
-                    box = page.ele("@name=cf-turnstile-response", timeout=1)
+                    box = page.ele("@name=cf-turnstile-response", timeout=0.5)
                     if box:
                         wrapper = box.parent()
                         iframe = wrapper.shadow_root.ele("tag:iframe")
                         cb = iframe.ele("tag:body").shadow_root.ele("tag:input")
-                        if cb:
-                            log.info(f"[{self.name}] 发现验证码，点击中...")
+                        if cb and (time.time() - last_click_time) > 1.5:
+                            click_count += 1
+                            log.info(f"[{self.name}] 发现验证码，第 {click_count} 次点击...")
                             cb.click()
+                            last_click_time = time.time()
                 except Exception:
                     pass
 
